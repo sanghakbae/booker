@@ -189,3 +189,55 @@ body {
   border-radius: 8px;
   height: auto;
 }
+
+/* ---- Print / PDF export ------------------------------------------------ */
+
+@media print {
+  /* Header, sidebars and controls are screen furniture, not part of the manual. */
+  header,
+  nav[aria-label="문서 목록"],
+  aside {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .doc {
+    max-width: none;
+    font-size: 10.5pt;
+    line-height: 1.6;
+  }
+
+  .doc pre,
+  .doc .table-scroll,
+  .doc img {
+    max-width: none;
+  }
+
+  .doc pre,
+  .doc table,
+  .doc img,
+  .doc blockquote {
+    break-inside: avoid;
+  }
+
+  .doc h1,
+  .doc h2,
+  .doc h3 {
+    break-after: avoid;
+  }
+
+  /* Print the destination of a link, since it cannot be clicked on paper. */
+  .doc a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #555555;
+  }
+}
+
+@page {
+  margin: 18mm 16mm;
+}

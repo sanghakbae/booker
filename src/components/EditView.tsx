@@ -2,39 +2,60 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { deletePage, slugify, updatePage } from "@/lib/db";
+import { useAuth } from "./AuthProvider";
+import {
+  deletePage,
+  publishPage,
+  saveDraft,
+  slugify,
+  unpublishPage,
+  updatePage,
+} from "@/lib/db";
+import type { Version } from "@/lib/types";
 import { EmptyState, Loading } from "./Loading";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { MobileNav } from "./MobileNav";
 import { MoreIcon } from "./Icons";
 import { Sidebar } from "./Sidebar";
 import { useSpace } from "./SpaceProvider";
+import { VersionHistory } from "./VersionHistory";
 
 export function EditView({ slug }: { slug: string }) {
-  const { space, pages, loading, canEdit, refresh } = useSpace();
+  const { space, pages, drafts, loading, canEdit, refresh } = useSpace();
+  const { user } = useAuth();
   const router = useRouter();
 
   const page = useMemo(() => pages.find((p) => p.slug === slug), [pages, slug]);
+  const draft = page ? drafts.get(page.id) : undefined;
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [parentId, setParentId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const loadedFor = useRef<string | null>(null);
 
-  // Seed the form once per page, so re-renders don't clobber in-progress edits.
+  // Seed once per document from the draft, falling back to the published copy
+  // for documents that predate drafts.
   useEffect(() => {
     if (!page || loadedFor.current === page.id) return;
     loadedFor.current = page.id;
-    setTitle(page.title);
-    setContent(page.content);
-    setParentId(page.parentId);
-  }, [page]);
+    setTitle(draft?.title ?? page.title);
+    setContent(draft?.content ?? page.content);
+    setParentId(draft?.parentId ?? page.parentId);
+  }, [page, draft]);
 
   const dirty =
-    !!page && (title !== page.title || content !== page.content || parentId !== page.parentId);
+    !!page &&
+    (title !== (draft?.title ?? page.title) ||
+      content !== (draft?.content ?? page.content) ||
+      parentId !== (draft?.parentId ?? page.parentId));
 
-  // A browser-level guard, since an accidental close would lose the draft.
+  const unpublishedChanges =
+    !!page && (!page.published || title !== page.title || content !== page.content);
+
   useEffect(() => {
     if (!dirty) return;
     const handler = (e: BeforeUnloadEvent) => e.preventDefault();
@@ -46,11 +67,14 @@ export function EditView({ slug }: { slug: string }) {
     if (!space || !page || saving) return;
     setSaving(true);
     try {
-      await updatePage(space.id, page.id, { title: title.trim() || "제목 없음", content, parentId });
+      await saveDraft(space.id, page.id, {
+        title: title.trim() || "제목 없음",
+        content,
+        parentId,
+      });
       await refresh();
-      // The form is deliberately NOT re-seeded here: autosave fires while the
-      // user is still typing, and re-seeding would replace their newer text
-      // with the copy that was just written to the server.
+      // The form is deliberately NOT re-seeded: autosave fires while the user
+      // is still typing, and re-seeding would replace their newer text.
     } catch (err) {
       window.alert(`저장에 실패했습니다: ${(err as Error).message}`);
     } finally {
@@ -58,13 +82,36 @@ export function EditView({ slug }: { slug: string }) {
     }
   };
 
-  // Autosave a couple of seconds after typing stops.
+  // Autosave the draft a couple of seconds after typing stops.
   useEffect(() => {
     if (!dirty) return;
     const timer = setTimeout(() => void save(), 2500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dirty, title, content, parentId]);
+
+  const publish = async () => {
+    if (!space || !page || publishing) return;
+    setPublishing(true);
+    try {
+      const body = { title: title.trim() || "제목 없음", content, parentId };
+      await saveDraft(space.id, page.id, body);
+      await publishPage(space.id, page.id, body, user?.email ?? "알 수 없음");
+      await refresh();
+    } catch (err) {
+      window.alert(`발행에 실패했습니다: ${(err as Error).message}`);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const unpublish = async () => {
+    if (!space || !page) return;
+    setMenuOpen(false);
+    if (!window.confirm(`"${page.title}"을(를) 공개 사이트에서 내릴까요? 초안은 남습니다.`)) return;
+    await unpublishPage(space.id, page.id);
+    await refresh();
+  };
 
   const remove = async () => {
     if (!space || !page) return;
@@ -91,10 +138,16 @@ export function EditView({ slug }: { slug: string }) {
     router.replace(`/s/${space.slug}/${slugified}/edit`);
   };
 
+  const restore = (version: Version) => {
+    setTitle(version.title);
+    setContent(version.content);
+    setHistoryOpen(false);
+  };
+
   if (loading) return <Loading />;
   if (!space || !page) return <EmptyState title="문서를 찾을 수 없습니다" />;
   if (!canEdit) {
-    return <EmptyState title="편집 권한이 없습니다" hint="이 매뉴얼의 소유자만 편집할 수 있습니다." />;
+    return <EmptyState title="편집 권한이 없습니다" hint="이 매뉴얼의 편집자만 수정할 수 있습니다." />;
   }
 
   return (
@@ -105,16 +158,27 @@ export function EditView({ slug }: { slug: string }) {
         <Sidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* The title gets its own row: sharing one with the controls squeezed
-              it to a few characters on narrow screens. */}
           <div className="border-b border-border px-4 pt-3">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="문서 제목"
-              aria-label="문서 제목"
-              className="w-full bg-transparent text-xl font-semibold outline-none"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="문서 제목"
+                aria-label="문서 제목"
+                className="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none"
+              />
+              <span
+                className={`shrink-0 rounded-full px-2.5 py-1 text-xs ${
+                  page.published
+                    ? unpublishedChanges
+                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                      : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                    : "bg-surface text-muted"
+                }`}
+              >
+                {page.published ? (unpublishedChanges ? "발행 대기 중" : "발행됨") : "초안"}
+              </span>
+            </div>
 
             <div className="flex flex-wrap items-center gap-2 py-2">
               <label className="text-xs text-muted" htmlFor="parent-select">
@@ -138,14 +202,20 @@ export function EditView({ slug }: { slug: string }) {
 
               <div className="ml-auto flex items-center gap-2">
                 <button
+                  onClick={publish}
+                  disabled={publishing || (!unpublishedChanges && !dirty)}
+                  className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
+                >
+                  {publishing ? "발행 중…" : "발행"}
+                </button>
+
+                <button
                   onClick={() => router.push(`/s/${space.slug}/${page.slug}`)}
                   className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface"
                 >
                   읽기로 보기
                 </button>
 
-                {/* Destructive actions live behind a menu instead of sitting
-                    next to the controls used on every edit. */}
                 <div className="relative">
                   <button
                     onClick={() => setMenuOpen((v) => !v)}
@@ -163,13 +233,30 @@ export function EditView({ slug }: { slug: string }) {
                         onClick={() => setMenuOpen(false)}
                         className="fixed inset-0 z-40 cursor-default"
                       />
-                      <div className="absolute right-0 z-50 mt-1 w-40 overflow-hidden rounded-md border border-border bg-background shadow-lg">
+                      <div className="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-md border border-border bg-background shadow-lg">
+                        <button
+                          onClick={() => {
+                            setMenuOpen(false);
+                            setHistoryOpen(true);
+                          }}
+                          className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface"
+                        >
+                          발행 이력
+                        </button>
                         <button
                           onClick={rename}
                           className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface"
                         >
                           주소 변경
                         </button>
+                        {page.published && (
+                          <button
+                            onClick={unpublish}
+                            className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface"
+                          >
+                            발행 취소
+                          </button>
+                        )}
                         <button
                           onClick={remove}
                           className="block w-full px-3 py-2.5 text-left text-sm text-red-500 hover:bg-surface"
@@ -194,6 +281,15 @@ export function EditView({ slug }: { slug: string }) {
           />
         </div>
       </div>
+
+      {historyOpen && (
+        <VersionHistory
+          spaceId={space.id}
+          pageId={page.id}
+          onRestore={restore}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
     </>
   );
 }

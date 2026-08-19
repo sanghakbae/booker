@@ -9,6 +9,7 @@ export function toSpace(built: BuiltSpace): Space {
     title: built.title,
     description: built.description,
     ownerId: "",
+    editorEmails: [],
     visibility: "public",
   };
 }
@@ -21,5 +22,6 @@ export function toPages(built: BuiltSpace): Page[] {
     content: p.content,
     parentId: p.parentId,
     order: p.order,
+    published: true,
   }));
 }

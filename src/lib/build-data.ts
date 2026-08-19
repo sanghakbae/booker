@@ -57,19 +57,6 @@ function decode(fields: Record<string, RestValue> = {}): Record<string, unknown>
 
 const idFrom = (name: string) => name.split("/").pop() as string;
 
-async function get(path: string) {
-  if (!PROJECT || !KEY) return null;
-  try {
-    const res = await fetch(`${BASE}${path}${path.includes("?") ? "&" : "?"}key=${KEY}`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    // A build should not fail because the network or the project is unreachable;
-    // the app still works client-side, it just ships without prerendered content.
-    return null;
-  }
-}
-
 /**
  * Security rules judge a query by its constraints, not by the documents it
  * returns: listing /spaces unfiltered is denied, while the same listing with
@@ -104,6 +91,35 @@ async function queryPublicSpaces() {
   }
 }
 
+async function queryPublishedPages(spaceId: string) {
+  if (!PROJECT || !KEY) return [];
+  try {
+    const res = await fetch(`${BASE}/spaces/${spaceId}:runQuery?key=${KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: "pages" }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath: "published" },
+              op: "EQUAL",
+              value: { booleanValue: true },
+            },
+          },
+          limit: 500,
+        },
+      }),
+    });
+    if (!res.ok) return [];
+    const rows: Array<{ document?: { name: string; fields?: Record<string, RestValue> } }> =
+      await res.json();
+    return rows.map((r) => r.document).filter((d) => !!d);
+  } catch {
+    return [];
+  }
+}
+
 let cache: Promise<BuiltSpace[]> | null = null;
 
 export function getPublishedSpaces(): Promise<BuiltSpace[]> {
@@ -118,11 +134,10 @@ async function load(): Promise<BuiltSpace[]> {
   for (const doc of docs) {
     const data = decode(doc.fields);
     const id = idFrom(doc.name);
-    const pageList = await get(`/spaces/${id}/pages?pageSize=500`);
-    const pages: BuiltPage[] = ((pageList?.documents ?? []) as Array<{
-      name: string;
-      fields?: Record<string, RestValue>;
-    }>)
+    // Same rule as the space listing: an unfiltered page listing is denied, a
+    // `published == true` query is not.
+    const pageDocs = await queryPublishedPages(id);
+    const pages: BuiltPage[] = pageDocs
       .map((p) => {
         const f = decode(p.fields);
         return {

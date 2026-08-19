@@ -7,12 +7,13 @@ import { extractToc } from "@/lib/toc";
 import { EmptyState, Loading } from "./Loading";
 import { Markdown } from "./Markdown";
 import { MobileNav } from "./MobileNav";
+import { PageFeedback } from "./PageFeedback";
 import { Sidebar } from "./Sidebar";
 import { Toc } from "./Toc";
 import { useSpace } from "./SpaceProvider";
 
 export function Reader({ slug }: { slug: string }) {
-  const { space, tree, loading, canEdit } = useSpace();
+  const { space, tree, drafts, loading, canEdit } = useSpace();
 
   const ordered = useMemo(() => flattenTree(tree), [tree]);
   const index = ordered.findIndex((p) => p.slug === slug);
@@ -39,6 +40,12 @@ export function Reader({ slug }: { slug: string }) {
             <EmptyState title="문서를 찾을 수 없습니다" />
           ) : (
             <>
+              {!current.published && (
+                <p className="mb-6 rounded-md bg-surface px-4 py-3 text-sm text-muted">
+                  이 문서는 아직 발행되지 않았습니다. 편집자에게만 보입니다.
+                </p>
+              )}
+
               {canEdit && (
                 <div className="mb-6 flex justify-end">
                   <Link
@@ -50,7 +57,13 @@ export function Reader({ slug }: { slug: string }) {
                 </div>
               )}
 
-              <Markdown content={current.content} />
+              <Markdown
+                content={
+                  current.published
+                    ? current.content
+                    : (drafts.get(current.id)?.content ?? current.content)
+                }
+              />
 
               <nav
                 style={{ maxWidth: "var(--content-width)" }}
@@ -73,6 +86,10 @@ export function Reader({ slug }: { slug: string }) {
                   </Link>
                 )}
               </nav>
+
+              {current.published && space.visibility === "public" && (
+                <PageFeedback spaceId={space.id} pageId={current.id} pageSlug={current.slug} />
+              )}
             </>
           )}
         </main>

@@ -7,33 +7,76 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(ownerId) {
-      return isSignedIn() && request.auth.uid == ownerId;
-    }
-
     match /spaces/{spaceId} {
-      // Public manuals are readable by anyone, including signed-out visitors.
-      allow read: if resource.data.visibility == 'public' || isOwner(resource.data.ownerId);
+
+      function space() {
+        return get(/databases/$(database)/documents/spaces/$(spaceId)).data;
+      }
+
+      // The owner, plus anyone whose signed-in email was invited as an editor.
+      function canEdit(data) {
+        return isSignedIn() && (
+          request.auth.uid == data.ownerId ||
+          (request.auth.token.email != null &&
+           request.auth.token.email in data.get('editorEmails', []))
+        );
+      }
+
+      function canRead(data) {
+        return data.visibility == 'public' || canEdit(data);
+      }
+
+      allow read: if canRead(resource.data);
 
       // The document ID is the slug, so the two must agree.
-      allow create: if isOwner(request.resource.data.ownerId)
+      allow create: if isSignedIn()
+                    && request.auth.uid == request.resource.data.ownerId
                     && request.resource.data.slug == spaceId
                     && request.resource.data.visibility in ['public', 'private'];
 
-      // The owner may not be reassigned by an update.
-      allow update: if isOwner(resource.data.ownerId)
+      // Ownership and address are fixed for the life of a document; changing an
+      // address is a move to a new document, not an update.
+      allow update: if canEdit(resource.data)
                     && request.resource.data.ownerId == resource.data.ownerId
-                    && request.resource.data.slug == resource.data.slug;
+                    && request.resource.data.slug == resource.data.slug
+                    // Only the owner may change who else can edit.
+                    && (request.resource.data.get('editorEmails', []) ==
+                        resource.data.get('editorEmails', []) ||
+                        request.auth.uid == resource.data.ownerId);
 
-      allow delete: if isOwner(resource.data.ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
 
+      // --- Published documents ------------------------------------------
+      // Readers may only list published pages. A query without
+      // `published == true` is rejected unless the caller can edit.
       match /pages/{pageId} {
-        function space() {
-          return get(/databases/$(database)/documents/spaces/$(spaceId)).data;
-        }
+        allow read: if (space().visibility == 'public' && resource.data.published == true)
+                    || canEdit(space());
+        allow write: if canEdit(space());
+      }
 
-        allow read: if space().visibility == 'public' || isOwner(space().ownerId);
-        allow write: if isOwner(space().ownerId);
+      // --- Working copies -----------------------------------------------
+      // Never readable by the public; this is where unpublished text lives.
+      match /drafts/{pageId} {
+        allow read, write: if canEdit(space());
+      }
+
+      // --- Publish history ----------------------------------------------
+      match /versions/{versionId} {
+        allow read: if canEdit(space());
+        allow create: if canEdit(space());
+        allow delete: if canEdit(space());
+      }
+
+      // --- Reader feedback ----------------------------------------------
+      // Anyone reading a public manual may leave one; only editors can read
+      // the results back.
+      match /feedback/{feedbackId} {
+        allow create: if space().visibility == 'public'
+                      && request.resource.data.helpful is bool
+                      && request.resource.data.comment is string
+                      && request.resource.data.comment.size() <= 1000;
+        allow read, delete: if canEdit(space());
       }
     }
   }

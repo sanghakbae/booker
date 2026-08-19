@@ -38,7 +38,14 @@ function NavItem({
             : "text-foreground/80 hover:bg-surface hover:text-foreground"
         }`}
       >
-        {node.title}
+        <span className="flex items-center gap-1.5">
+          <span className="min-w-0 flex-1">{node.title}</span>
+          {!node.published && (
+            <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[11px] text-muted">
+              초안
+            </span>
+          )}
+        </span>
       </Link>
       {node.children.length > 0 && (
         <ul className="mt-0.5 space-y-0.5">
@@ -128,6 +135,25 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       )}
 
       {canEdit && !query.trim() && <NewPageButton />}
+
+      <div className="mt-4 space-y-0.5 border-t border-border pt-4">
+        <Link
+          href={`/s/${space.slug}/print`}
+          onClick={onNavigate}
+          className="block rounded-md px-3 py-2 text-sm text-muted hover:bg-surface hover:text-foreground"
+        >
+          인쇄 · PDF로 저장
+        </Link>
+        {canEdit && (
+          <Link
+            href={`/s/${space.slug}/settings`}
+            onClick={onNavigate}
+            className="block rounded-md px-3 py-2 text-sm text-muted hover:bg-surface hover:text-foreground"
+          >
+            매뉴얼 설정
+          </Link>
+        )}
+      </div>
 
       <ShareLink spaceSlug={space.slug} />
     </>

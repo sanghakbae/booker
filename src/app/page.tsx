@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { listOwnedSpaces, listPublicSpaces } from "@/lib/db";
+import { GlobalSearch } from "@/components/GlobalSearch";
+import { listOwnedSpaces, listPublicSpaces, listSharedSpaces } from "@/lib/db";
 import type { Space } from "@/lib/types";
 
 export default function HomePage() {
   const { user, signIn } = useAuth();
   const [publicSpaces, setPublicSpaces] = useState<Space[]>([]);
   const [mine, setMine] = useState<Space[]>([]);
+  const [shared, setShared] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,10 +27,14 @@ export default function HomePage() {
     if (!user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMine([]);
+       
+      setShared([]);
       return;
     }
-     
     listOwnedSpaces(user.uid).then(setMine).catch(() => setMine([]));
+    if (user.email) {
+      listSharedSpaces(user.email).then(setShared).catch(() => setShared([]));
+    }
   }, [user]);
 
   return (
@@ -49,8 +55,14 @@ export default function HomePage() {
         )}
       </section>
 
-      {mine.length > 0 && (
-        <SpaceGrid title="내 매뉴얼" spaces={mine} showVisibility />
+      <section className="mb-14">
+        <GlobalSearch />
+      </section>
+
+      {mine.length > 0 && <SpaceGrid title="내 매뉴얼" spaces={mine} showVisibility />}
+
+      {shared.length > 0 && (
+        <SpaceGrid title="함께 편집하는 매뉴얼" spaces={shared} showVisibility />
       )}
 
       <SpaceGrid
