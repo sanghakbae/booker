@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { browserLocalPersistence, getAuth, initializeAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -14,7 +14,25 @@ const firebaseConfig = {
 };
 
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+
+/**
+ * Auth is pinned to localStorage rather than the default IndexedDB store.
+ * The IndexedDB store refuses to open while the tab is hidden — which is
+ * exactly what happens when a sign-in popup takes focus — and throws
+ * "Database is closing/hidden". localStorage has no such restriction.
+ */
+function createAuth() {
+  if (typeof window === "undefined") return getAuth(app);
+  try {
+    return initializeAuth(app, { persistence: browserLocalPersistence });
+  } catch {
+    // Already initialized — happens when a hot reload re-runs this module.
+    return getAuth(app);
+  }
+}
+
+export const auth = createAuth();
+
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
