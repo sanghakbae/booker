@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    match /spaces/{spaceId} {
+      // Public manuals are readable by anyone, including signed-out visitors.
+      allow read: if resource.data.visibility == 'public' || isOwner(resource.data.ownerId);
+
+      allow create: if isOwner(request.resource.data.ownerId)
+                    && request.resource.data.slug is string
+                    && request.resource.data.slug.size() > 0
+                    && request.resource.data.visibility in ['public', 'private'];
+
+      // The owner may not be reassigned by an update.
+      allow update: if isOwner(resource.data.ownerId)
+                    && request.resource.data.ownerId == resource.data.ownerId;
+
+      allow delete: if isOwner(resource.data.ownerId);
+
+      match /pages/{pageId} {
+        function space() {
+          return get(/databases/$(database)/documents/spaces/$(spaceId)).data;
+        }
+
+        allow read: if space().visibility == 'public' || isOwner(space().ownerId);
+        allow write: if isOwner(space().ownerId);
+      }
+    }
+  }
+}
