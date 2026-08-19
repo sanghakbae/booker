@@ -6,7 +6,6 @@ import {
   initializeAuth,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -44,7 +43,6 @@ function createAuth() {
 export const auth = createAuth();
 
 export const db = getFirestore(app);
-export const storage = getStorage(app);
 
 // Analytics only exists in the browser, and only when the environment supports it.
 export async function initAnalytics() {

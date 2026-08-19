@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
-import { storage } from "@/lib/firebase";
+import { uploadImage } from "@/lib/uploads";
 import {
   continueList,
   indent,
@@ -116,10 +115,7 @@ export function MarkdownEditor({
       setUploading(true);
       try {
         for (const file of images) {
-          const safe = file.name.replace(/[^\w.-]+/g, "_");
-          const path = `spaces/${spaceId}/${Date.now()}-${safe}`;
-          const snap = await uploadBytes(storageRef(storage, path), file);
-          const url = await getDownloadURL(snap.ref);
+          const url = await uploadImage(file, spaceId);
           // The extension is noise in alt text; the name is the useful part.
           const alt = file.name.replace(/\.[^.]+$/, "");
           apply((input) => insertBlock(input, `![${alt}](${url})`));

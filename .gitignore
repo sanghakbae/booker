@@ -50,3 +50,7 @@ next-env.d.ts
 
 # generated at build time
 /public/search-index.json
+
+# wrangler
+/worker/.wrangler
+/worker/.dev.vars

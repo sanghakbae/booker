@@ -1,0 +1,12 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "booker-uploads",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "observability": { "enabled": true },
+  "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "booker-uploads" }],
+  "vars": {
+    "FIREBASE_PROJECT_ID": "booker-606eb",
+    "ALLOWED_ORIGINS": "https://booker.sanghak.kr,http://localhost:3000"
+  }
+}
