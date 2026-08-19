@@ -4,18 +4,23 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { createPage, createSpace, slugify } from "@/lib/db";
+import { TEMPLATES } from "@/lib/templates";
 
 export default function NewSpacePage() {
   const { user, loading, signIn } = useAuth();
   const router = useRouter();
+
   const [title, setTitle] = useState("");
+  const [templateId, setTemplateId] = useState("product");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [showOptions, setShowOptions] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const effectiveSlug = slug || slugify(title);
+  // Everything except the name has a sensible default, so one field is enough.
+  const effectiveSlug = slugify(slug || title);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,17 +30,23 @@ export default function NewSpacePage() {
     try {
       const spaceId = await createSpace({
         title: title.trim(),
-        slug: slugify(effectiveSlug),
+        slug: effectiveSlug,
         description: description.trim(),
         ownerId: user.uid,
         visibility,
       });
-      await createPage(spaceId, {
-        title: "시작하기",
-        slug: "시작하기",
-        content: `# 시작하기\n\n${title.trim()} 매뉴얼에 오신 것을 환영합니다.\n`,
-      });
-      router.push(`/s/${slugify(effectiveSlug)}`);
+
+      const template = TEMPLATES.find((t) => t.id === templateId) ?? TEMPLATES[0];
+      // Sequential, because each page's order depends on the ones before it.
+      for (const page of template.pages) {
+        await createPage(spaceId, {
+          title: page.title,
+          slug: slugify(page.title),
+          content: page.content,
+        });
+      }
+
+      router.push(`/s/${effectiveSlug}`);
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
@@ -59,80 +70,109 @@ export default function NewSpacePage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-16">
-      <h1 className="text-2xl font-bold">새 매뉴얼</h1>
-      <form onSubmit={submit} className="mt-8 space-y-6">
-        <Field label="이름">
+    <main className="mx-auto w-full max-w-2xl px-4 py-16">
+      <h1 className="text-3xl font-bold tracking-tight">새 매뉴얼</h1>
+      <p className="mt-2 text-muted">이름만 정하면 나머지는 나중에 바꿀 수 있습니다.</p>
+
+      <form onSubmit={submit} className="mt-10 space-y-8">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">이름</label>
           <input
             required
+            autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="예: 관리자 매뉴얼"
-            className="w-full rounded-md border border-border bg-background px-3 py-2"
+            className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-lg"
           />
-        </Field>
+          {title && (
+            <p className="mt-1.5 text-xs text-muted">
+              booker.sanghak.kr/s/{effectiveSlug}
+            </p>
+          )}
+        </div>
 
-        <Field label="주소" hint={`booker.sanghak.kr/s/${slugify(effectiveSlug || "주소")}`}>
-          <input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder={slugify(title) || "admin-guide"}
-            className="w-full rounded-md border border-border bg-background px-3 py-2"
-          />
-        </Field>
-
-        <Field label="설명">
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="w-full rounded-md border border-border bg-background px-3 py-2"
-          />
-        </Field>
-
-        <Field label="공개 범위">
-          <div className="flex gap-4 text-sm">
-            {(["public", "private"] as const).map((v) => (
-              <label key={v} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={visibility === v}
-                  onChange={() => setVisibility(v)}
-                />
-                {v === "public" ? "공개 — 누구나 읽을 수 있음" : "비공개 — 나만 볼 수 있음"}
-              </label>
+        <div>
+          <label className="mb-2 block text-sm font-medium">시작 구성</label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => setTemplateId(template.id)}
+                className={`rounded-lg border p-3 text-left ${
+                  templateId === template.id
+                    ? "border-accent bg-accent/5"
+                    : "border-border hover:border-accent/50"
+                }`}
+              >
+                <p className="text-sm font-medium">{template.name}</p>
+                <p className="mt-0.5 text-xs text-muted">{template.summary}</p>
+              </button>
             ))}
           </div>
-        </Field>
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowOptions((v) => !v)}
+            className="text-sm text-muted hover:text-foreground"
+          >
+            {showOptions ? "− 세부 설정 접기" : "+ 주소 · 설명 · 공개 범위 바꾸기"}
+          </button>
+
+          {showOptions && (
+            <div className="mt-4 space-y-5 rounded-lg border border-border p-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">주소</label>
+                <input
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder={slugify(title) || "admin-guide"}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">설명</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">공개 범위</label>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  {(["public", "private"] as const).map((v) => (
+                    <label key={v} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={visibility === v}
+                        onChange={() => setVisibility(v)}
+                      />
+                      {v === "public" ? "공개 — 누구나 읽을 수 있음" : "비공개 — 나만 볼 수 있음"}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <button
           type="submit"
           disabled={busy || !title.trim()}
-          className="rounded-md bg-accent px-4 py-2 font-medium text-white disabled:opacity-40"
+          className="rounded-md bg-accent px-5 py-2.5 font-medium text-white disabled:opacity-40"
         >
           {busy ? "만드는 중…" : "만들기"}
         </button>
       </form>
     </main>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium">{label}</label>
-      {children}
-      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
-    </div>
   );
 }

@@ -13,6 +13,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // State is set from promise callbacks, after the effect body has already returned.
+     
     listPublicSpaces()
       .then(setPublicSpaces)
       .catch(() => setPublicSpaces([]))
@@ -21,9 +23,11 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMine([]);
       return;
     }
+     
     listOwnedSpaces(user.uid).then(setMine).catch(() => setMine([]));
   }, [user]);
 

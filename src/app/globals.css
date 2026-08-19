@@ -43,6 +43,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, "Apple SD Gothic Neo", "Malgun Gothic",
     sans-serif;
+  /* Korean has no inter-word breaks by default, so text wraps mid-word.
+     keep-all makes lines break between words instead. */
+  word-break: keep-all;
+  overflow-wrap: break-word; /* ...but a single long URL must still wrap. */
 }
 
 /* ---- Manual body copy -------------------------------------------------- */

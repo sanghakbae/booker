@@ -1,15 +1,33 @@
-"use client";
-
-import { use } from "react";
 import { SpaceProvider } from "@/components/SpaceProvider";
+import { atLeastOne, FALLBACK_SLUG, getPublishedSpaces } from "@/lib/build-data";
+import { toPages, toSpace } from "@/lib/prerender";
 
-export default function SpaceLayout({
+export async function generateStaticParams() {
+  const spaces = await getPublishedSpaces();
+  return atLeastOne(
+    spaces.map((s) => ({ space: s.slug })),
+    { space: FALLBACK_SLUG }
+  );
+}
+
+export default async function SpaceLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
   params: Promise<{ space: string }>;
 }) {
-  const { space } = use(params);
-  return <SpaceProvider slug={decodeURIComponent(space)}>{children}</SpaceProvider>;
+  const { space } = await params;
+  const slug = decodeURIComponent(space);
+  const built = (await getPublishedSpaces()).find((s) => s.slug === slug);
+
+  return (
+    <SpaceProvider
+      slug={slug}
+      initialSpace={built ? toSpace(built) : null}
+      initialPages={built ? toPages(built) : []}
+    >
+      {children}
+    </SpaceProvider>
+  );
 }

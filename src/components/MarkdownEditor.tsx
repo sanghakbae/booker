@@ -194,6 +194,9 @@ export function MarkdownEditor({
       }
     >
       <div className="flex flex-wrap items-center gap-1 border-b border-border bg-surface px-3 py-2">
+        {/* Each tool's `run` reads the textarea ref, but only when clicked —
+            the lint rule cannot see that the read is deferred. */}
+        {/* eslint-disable-next-line react-hooks/refs */}
         {tools.map((tool, i) =>
           tool === "|" ? (
             <span key={i} className="mx-1 h-5 w-px bg-border" />

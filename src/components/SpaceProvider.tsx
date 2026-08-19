@@ -18,15 +18,20 @@ const SpaceContext = createContext<SpaceState | null>(null);
 
 export function SpaceProvider({
   slug,
+  initialSpace = null,
+  initialPages = [],
   children,
 }: {
   slug: string;
+  /** Prerendered at build time so crawlers see real content. */
+  initialSpace?: Space | null;
+  initialPages?: Page[];
   children: React.ReactNode;
 }) {
   const { user } = useAuth();
-  const [space, setSpace] = useState<Space | null>(null);
-  const [pages, setPages] = useState<Page[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [space, setSpace] = useState<Space | null>(initialSpace);
+  const [pages, setPages] = useState<Page[]>(initialPages);
+  const [loading, setLoading] = useState(!initialSpace);
 
   const refresh = useCallback(async () => {
     const found = await getSpaceBySlug(slug);
@@ -36,7 +41,8 @@ export function SpaceProvider({
   }, [slug]);
 
   useEffect(() => {
-    setLoading(true);
+    // refresh() awaits Firestore before it sets state, so nothing is synchronous here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh]);
 

@@ -9,6 +9,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -40,10 +41,20 @@ export async function listOwnedSpaces(ownerId: string): Promise<Space[]> {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Space);
 }
 
+/**
+ * A space's document ID *is* its slug. Looking it up has to be a `get` rather
+ * than a query: security rules evaluate a query against its constraints, and a
+ * `where("slug", "==", …)` alone cannot prove the caller may read the result.
+ * Keying by slug also makes duplicate addresses impossible by construction.
+ */
 export async function getSpaceBySlug(slug: string): Promise<Space | null> {
-  const snap = await getDocs(query(spacesRef, where("slug", "==", slug), limit(1)));
-  const d = snap.docs[0];
-  return d ? ({ id: d.id, ...d.data() } as Space) : null;
+  try {
+    const d = await getDoc(doc(db, "spaces", slug));
+    return d.exists() ? ({ id: d.id, ...d.data() } as Space) : null;
+  } catch {
+    // A private space owned by someone else reads as "not found".
+    return null;
+  }
 }
 
 export async function createSpace(input: {
@@ -55,12 +66,12 @@ export async function createSpace(input: {
 }) {
   const existing = await getSpaceBySlug(input.slug);
   if (existing) throw new Error(`이미 사용 중인 주소입니다: /${input.slug}`);
-  const ref = await addDoc(spacesRef, {
+  await setDoc(doc(db, "spaces", input.slug), {
     ...input,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return ref.id;
+  return input.slug;
 }
 
 export async function updateSpace(spaceId: string, patch: Partial<Space>) {

@@ -15,14 +15,15 @@ service cloud.firestore {
       // Public manuals are readable by anyone, including signed-out visitors.
       allow read: if resource.data.visibility == 'public' || isOwner(resource.data.ownerId);
 
+      // The document ID is the slug, so the two must agree.
       allow create: if isOwner(request.resource.data.ownerId)
-                    && request.resource.data.slug is string
-                    && request.resource.data.slug.size() > 0
+                    && request.resource.data.slug == spaceId
                     && request.resource.data.visibility in ['public', 'private'];
 
       // The owner may not be reassigned by an update.
       allow update: if isOwner(resource.data.ownerId)
-                    && request.resource.data.ownerId == resource.data.ownerId;
+                    && request.resource.data.ownerId == resource.data.ownerId
+                    && request.resource.data.slug == resource.data.slug;
 
       allow delete: if isOwner(resource.data.ownerId);
 

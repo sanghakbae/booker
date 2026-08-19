@@ -1,5 +1,10 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { browserLocalPersistence, getAuth, initializeAuth } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  getAuth,
+  initializeAuth,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -24,7 +29,12 @@ export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 function createAuth() {
   if (typeof window === "undefined") return getAuth(app);
   try {
-    return initializeAuth(app, { persistence: browserLocalPersistence });
+    return initializeAuth(app, {
+      persistence: browserLocalPersistence,
+      // initializeAuth only wires up what it is given. Without this resolver
+      // signInWithPopup fails with auth/argument-error.
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
   } catch {
     // Already initialized — happens when a hot reload re-runs this module.
     return getAuth(app);

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { PageNode } from "@/lib/types";
+import { NewPageButton } from "./NewPageButton";
+import { ShareLink } from "./ShareLink";
 
 function NavItem({
   node,
@@ -88,14 +90,9 @@ export function Sidebar({
           </ul>
         )}
 
-        {canEdit && (
-          <Link
-            href={`/s/${spaceSlug}/new`}
-            className="mt-4 block rounded-md px-3 py-1.5 text-sm text-muted hover:bg-surface hover:text-foreground"
-          >
-            + 새 문서
-          </Link>
-        )}
+        {canEdit && <NewPageButton />}
+
+        <ShareLink spaceSlug={spaceSlug} />
       </div>
     </nav>
   );
