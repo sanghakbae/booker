@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the Firebase web config, which identifies the project rather than
+# granting access to it, and which the Pages build needs to prerender content.
+!.env.production
+!.env.example
 
 # vercel
 .vercel
@@ -40,8 +44,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local env
-.env.local
 
 # build output
 /out
