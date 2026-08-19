@@ -12,25 +12,31 @@ export function Header() {
         style={{ maxWidth: "var(--container-width)" }}
         className="mx-auto flex h-14 items-center gap-4 px-4"
       >
-        <Link href="/" className="font-semibold tracking-tight">
+        <Link href="/" className="flex h-11 items-center font-semibold tracking-tight">
           booker
         </Link>
 
         <div className="ml-auto flex items-center gap-3 text-sm">
           {loading ? null : user ? (
             <>
-              <Link href="/new" className="text-muted hover:text-foreground">
+              <Link
+                href="/new"
+                className="flex h-11 items-center px-1 text-muted hover:text-foreground"
+              >
                 새 매뉴얼
               </Link>
               <span className="hidden text-muted sm:inline">{user.displayName ?? user.email}</span>
-              <button onClick={() => signOut()} className="text-muted hover:text-foreground">
+              <button
+                onClick={() => signOut()}
+                className="flex h-11 items-center px-1 text-muted hover:text-foreground"
+              >
                 로그아웃
               </button>
             </>
           ) : (
             <button
               onClick={() => signIn()}
-              className="rounded-md border border-border px-3 py-1.5 font-medium hover:bg-surface"
+              className="flex h-11 items-center rounded-md border border-border px-3 font-medium hover:bg-surface"
             >
               Google로 로그인
             </button>

@@ -25,7 +25,9 @@ export function Toc({ items }: { items: TocItem[] }) {
     return () => observer.disconnect();
   }, [items]);
 
-  if (items.length < 2) return null;
+  if (items.length < 2) {
+    return <div style={{ width: "var(--toc-width)" }} className="hidden shrink-0 xl:block" />;
+  }
 
   return (
     <aside

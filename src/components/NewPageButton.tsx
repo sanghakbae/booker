@@ -60,7 +60,7 @@ export function NewPageButton() {
         onBlur={() => !title.trim() && setOpen(false)}
         placeholder="문서 제목"
         disabled={busy}
-        className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+        className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
       />
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </form>

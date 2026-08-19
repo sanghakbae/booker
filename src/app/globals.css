@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Syntax highlighting follows the OS theme. The light sheet's token colours are
+   unreadable on the dark code surface, so each theme loads only its own. */
+@import "highlight.js/styles/github.css" (prefers-color-scheme: light);
+@import "highlight.js/styles/github-dark.css" (prefers-color-scheme: dark);
+
 :root {
   --background: #ffffff;
   --foreground: #1b1f24;
@@ -7,6 +12,10 @@
   --border: #e4e7ec;
   --surface: #f8f9fb;
   --accent: #3563e9;
+  --accent-foreground: #ffffff;
+  /* Divider borders may be faint, but a control's own outline must clear the
+     3:1 non-text contrast bar (WCAG 1.4.11) or the field edge disappears. */
+  --input-border: #878f9b;
 
   /* Layout scale — see README for the rationale behind these widths. */
   --sidebar-width: 280px;
@@ -24,6 +33,9 @@
     --border: #23272e;
     --surface: #161a20;
     --accent: #7d9bff;
+    /* White on this accent is 2.62:1 — the text has to darken instead. */
+    --accent-foreground: #0e1116;
+    --input-border: #5f666f;
   }
 }
 
@@ -34,6 +46,8 @@
   --color-border: var(--border);
   --color-surface: var(--surface);
   --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-input: var(--input-border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -65,7 +79,9 @@ body {
 .doc h1,
 .doc h2,
 .doc h3,
-.doc h4 {
+.doc h4,
+.doc h5,
+.doc h6 {
   font-weight: 650;
   line-height: 1.3;
   scroll-margin-top: 5rem;
@@ -75,6 +91,9 @@ body {
 .doc > h2 { font-size: 1.5rem; margin-top: 2.75rem; }
 .doc > h3 { font-size: 1.2rem; margin-top: 2rem; }
 .doc > h4 { font-size: 1.05rem; margin-top: 1.5rem; }
+/* Without these, h5/h6 fall back to the UA sizes — smaller than body text. */
+.doc > h5 { font-size: 1rem; margin-top: 1.5rem; }
+.doc > h6 { font-size: 1rem; margin-top: 1.5rem; color: var(--muted); }
 
 .doc h2 {
   padding-bottom: 0.4rem;

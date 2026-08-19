@@ -42,7 +42,7 @@ export default function HomePage() {
         {!user && (
           <button
             onClick={() => signIn()}
-            className="mt-6 rounded-md bg-accent px-4 py-2 font-medium text-white"
+            className="mt-6 rounded-md bg-accent px-4 py-2 font-medium text-accent-foreground"
           >
             Google로 시작하기
           </button>

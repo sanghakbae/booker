@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { Loading } from "@/components/Loading";
 import { createPage, createSpace, slugify } from "@/lib/db";
 import { TEMPLATES } from "@/lib/templates";
 
@@ -53,7 +54,7 @@ export default function NewSpacePage() {
     }
   };
 
-  if (loading) return <main className="p-16 text-muted">불러오는 중…</main>;
+  if (loading) return <Loading />;
 
   if (!user) {
     return (
@@ -61,7 +62,7 @@ export default function NewSpacePage() {
         <p className="text-muted">매뉴얼을 만들려면 로그인이 필요합니다.</p>
         <button
           onClick={() => signIn()}
-          className="mt-4 rounded-md bg-accent px-4 py-2 font-medium text-white"
+          className="mt-4 rounded-md bg-accent px-4 py-2 font-medium text-accent-foreground"
         >
           Google로 로그인
         </button>
@@ -83,7 +84,7 @@ export default function NewSpacePage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="예: 관리자 매뉴얼"
-            className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-lg"
+            className="w-full rounded-md border border-input bg-background px-3 py-2.5 text-lg"
           />
           {title && (
             <p className="mt-1.5 text-xs text-muted">
@@ -130,7 +131,7 @@ export default function NewSpacePage() {
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
                   placeholder={slugify(title) || "admin-guide"}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
                 />
               </div>
 
@@ -140,7 +141,7 @@ export default function NewSpacePage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={2}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
                 />
               </div>
 
@@ -168,7 +169,7 @@ export default function NewSpacePage() {
         <button
           type="submit"
           disabled={busy || !title.trim()}
-          className="rounded-md bg-accent px-5 py-2.5 font-medium text-white disabled:opacity-40"
+          className="rounded-md bg-accent px-5 py-2.5 font-medium text-accent-foreground disabled:opacity-40"
         >
           {busy ? "만드는 중…" : "만들기"}
         </button>

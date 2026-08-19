@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { EditView } from "./EditView";
+import { Loading } from "./Loading";
 import { NewDoc } from "./NewDoc";
 import { Reader } from "./Reader";
 import { SpaceIndex } from "./SpaceIndex";
@@ -52,7 +53,7 @@ export function ClientFallback() {
     () => null
   );
 
-  if (!route) return <main className="p-16 text-muted">불러오는 중…</main>;
+  if (!route) return <Loading />;
 
   if (route.kind === "unknown") {
     return (
