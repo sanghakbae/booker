@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { Wordmark } from "@/components/Wordmark";
 import { listOwnedSpaces, listPublicSpaces, listSharedSpaces } from "@/lib/db";
 import type { Space } from "@/lib/types";
 
@@ -15,8 +16,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // State is set from promise callbacks, after the effect body has already returned.
-     
+    // State is set from promise callbacks, after the effect body has returned.
     listPublicSpaces()
       .then(setPublicSpaces)
       .catch(() => setPublicSpaces([]))
@@ -38,24 +38,45 @@ export default function HomePage() {
   }, [user]);
 
   return (
-    <main style={{ maxWidth: "var(--container-width)" }} className="mx-auto w-full px-4 py-16">
-      <section className="mb-16" style={{ maxWidth: "var(--content-width)" }}>
-        <h1 className="text-4xl font-bold tracking-tight">매뉴얼을 쓰고, 공개하세요</h1>
-        <p className="mt-4 text-lg text-muted">
-          마크다운으로 작성하면 목차와 검색이 있는 문서 사이트가 됩니다. 읽는 데는 로그인이
-          필요하지 않습니다.
+    <main
+      style={{ maxWidth: "var(--container-width)" }}
+      className="brand-wash mx-auto w-full px-4 pb-24 pt-16"
+    >
+      <section className="mb-12" style={{ maxWidth: "var(--content-width)" }}>
+        <Wordmark className="text-3xl" />
+
+        <h1 className="brand-text mt-6 text-5xl font-bold leading-[1.15] tracking-tight">
+          매뉴얼을 쓰고,
+          <br />
+          공개하세요
+        </h1>
+
+        <p className="mt-5 text-lg leading-relaxed text-muted">
+          마크다운으로 쓰면 목차와 검색이 있는 문서 사이트가 됩니다.{" "}
+          <span className="nowrap">읽는 데 로그인은 필요 없습니다.</span>
         </p>
-        {!user && (
-          <button
-            onClick={() => signIn()}
-            className="mt-6 rounded-md bg-accent px-4 py-2 font-medium text-accent-foreground"
-          >
-            Google로 시작하기
-          </button>
-        )}
+
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          {user ? (
+            <Link
+              href="/new"
+              className="rounded-lg bg-accent px-5 py-3 font-medium text-accent-foreground shadow-[0_6px_20px_var(--brand-glow)]"
+            >
+              새 매뉴얼 만들기
+            </Link>
+          ) : (
+            <button
+              onClick={() => signIn()}
+              className="rounded-lg bg-accent px-5 py-3 font-medium text-accent-foreground shadow-[0_6px_20px_var(--brand-glow)]"
+            >
+              Google로 시작하기
+            </button>
+          )}
+          <span className="text-sm text-muted">무료 · 설치 없음</span>
+        </div>
       </section>
 
-      <section className="mb-14">
+      <section className="mb-16">
         <GlobalSearch />
       </section>
 
@@ -87,24 +108,27 @@ function SpaceGrid({
 }) {
   return (
     <section className="mb-14">
-      <h2 className="mb-4 text-sm font-semibold tracking-wide text-muted">{title}</h2>
+      <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold tracking-wide text-muted">
+        <span className="h-3 w-1 rounded-full bg-accent" aria-hidden />
+        {title}
+      </h2>
+
       {spaces.length === 0 ? (
         <p className="text-sm text-muted">{empty}</p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {spaces.map((space) => (
             <li key={space.id}>
-              <Link
-                href={`/s/${space.slug}`}
-                className="block h-full rounded-lg border border-border p-5 hover:border-accent"
-              >
+              <Link href={`/s/${space.slug}`} className="card block h-full p-5">
                 <p className="font-medium">{space.title}</p>
                 {space.description && (
-                  <p className="mt-1 line-clamp-2 text-sm text-muted">{space.description}</p>
+                  <p className="mt-1.5 line-clamp-2 text-sm text-muted">{space.description}</p>
                 )}
-                <p className="mt-3 text-xs text-muted">
-                  /{space.slug}
-                  {showVisibility && space.visibility === "private" && " · 비공개"}
+                <p className="mt-4 flex items-center gap-2 text-xs text-muted">
+                  <span className="font-mono">/{space.slug}</span>
+                  {showVisibility && space.visibility === "private" && (
+                    <span className="rounded-full bg-surface px-2 py-0.5">비공개</span>
+                  )}
                 </p>
               </Link>
             </li>

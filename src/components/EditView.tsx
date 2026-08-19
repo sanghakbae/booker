@@ -168,11 +168,11 @@ export function EditView({ slug }: { slug: string }) {
                 className="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none"
               />
               <span
-                className={`shrink-0 rounded-full px-2.5 py-1 text-xs ${
+                className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
                   page.published
                     ? unpublishedChanges
-                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                      : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      ? "bg-warning/12 text-warning"
+                      : "bg-success/12 text-success"
                     : "bg-surface text-muted"
                 }`}
               >

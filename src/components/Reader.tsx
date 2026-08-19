@@ -47,7 +47,10 @@ export function Reader({ slug }: { slug: string }) {
               )}
 
               {canEdit && (
-                <div className="mb-6 flex justify-end">
+                <div
+                  style={{ maxWidth: "var(--content-width)" }}
+                  className="mb-6 flex justify-end"
+                >
                   <Link
                     href={`/s/${space.slug}/${current.slug}/edit`}
                     className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface"
