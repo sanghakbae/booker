@@ -26,13 +26,13 @@ export function Toc({ items }: { items: TocItem[] }) {
   }, [items]);
 
   if (items.length < 2) {
-    return <div style={{ width: "var(--toc-width)" }} className="hidden shrink-0 xl:block" />;
+    return <div style={{ width: "var(--toc-width)" }} className="hidden shrink-0 rail:block" />;
   }
 
   return (
     <aside
       style={{ width: "var(--toc-width)" }}
-      className="hidden shrink-0 xl:block"
+      className="hidden shrink-0 rail:block"
       aria-label="목차"
     >
       <div className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto py-6 pr-4">

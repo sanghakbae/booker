@@ -33,14 +33,14 @@ export function PageFeedback({
 
   if (sent) {
     return (
-      <div style={{ maxWidth: "var(--content-width)" }} className="mt-12 rounded-lg bg-surface p-5">
+      <div className="doc-aligned mt-12 rounded-lg bg-surface p-5">
         <p className="text-sm">의견 고맙습니다.</p>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: "var(--content-width)" }} className="mt-12 rounded-lg bg-surface p-5">
+    <div className="doc-aligned mt-12 rounded-lg bg-surface p-5">
       <p className="text-sm font-medium">이 문서가 도움이 되었나요?</p>
 
       <div className="mt-3 flex gap-2">

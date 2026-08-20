@@ -41,16 +41,13 @@ export function Reader({ slug }: { slug: string }) {
           ) : (
             <>
               {!current.published && (
-                <p className="mb-6 rounded-md bg-surface px-4 py-3 text-sm text-muted">
+                <p className="doc-aligned mb-6 rounded-md bg-surface px-4 py-3 text-sm text-muted">
                   이 문서는 아직 발행되지 않았습니다. 편집자에게만 보입니다.
                 </p>
               )}
 
               {canEdit && (
-                <div
-                  style={{ maxWidth: "var(--content-width)" }}
-                  className="mb-6 flex justify-end"
-                >
+                <div className="doc-aligned mb-6 flex justify-end">
                   <Link
                     href={`/s/${space.slug}/${current.slug}/edit`}
                     className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface"
@@ -68,10 +65,7 @@ export function Reader({ slug }: { slug: string }) {
                 }
               />
 
-              <nav
-                style={{ maxWidth: "var(--content-width)" }}
-                className="mt-16 flex gap-4 border-t border-border pt-6 text-sm"
-              >
+              <nav className="doc-aligned mt-16 flex gap-4 border-t border-border pt-6 text-sm">
                 {index > 0 && (
                   <Link
                     href={`/s/${space.slug}/${ordered[index - 1].slug}`}

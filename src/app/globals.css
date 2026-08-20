@@ -29,12 +29,16 @@
   --shadow-md: 0 4px 16px rgba(22, 20, 31, 0.08);
   --shadow-lg: 0 12px 40px rgba(22, 20, 31, 0.12);
 
-  /* Layout scale — see README for the rationale behind these widths. */
+  /* Layout scale. The text column is 800px — about 44 Korean characters a
+     line, and wide enough that a three-column table is not squeezed.
+     The container is sized so all three columns fit at 800: 800 + 80 padding
+     + 280 sidebar + 240 rail + 32 gutter needs about 1430px, so the rail only
+     appears at 1440 and the container opens to 1520 beyond that. */
   --sidebar-width: 280px;
   --toc-width: 240px;
-  --content-width: 720px;
-  --content-wide: 880px;
-  --container-width: 1440px;
+  --content-width: 800px;
+  --content-wide: 960px;
+  --container-width: 1520px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -60,7 +64,19 @@
   }
 }
 
+/* One step up on large monitors. The column stays capped — a line that keeps
+   growing with the window is the thing that actually hurts reading — but on a
+   screen this wide there is room to give tables and code a little more. */
+@media (min-width: 1680px) {
+  :root {
+    --container-width: 1680px;
+    --content-width: 880px;
+  }
+}
+
 @theme inline {
+  /* Showing the rail any earlier squeezes the text column below 800px. */
+  --breakpoint-rail: 1440px;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
@@ -157,8 +173,14 @@ body {
   white-space: nowrap;
 }
 
-.doc {
+/* Blocks that sit alongside the body copy and must share its edges. */
+.doc,
+.doc-aligned {
   max-width: var(--content-width);
+  margin-inline: auto;
+}
+
+.doc {
   font-size: 1rem;
   line-height: 1.75;
   word-break: keep-all; /* Korean reads badly when words break mid-token. */
@@ -223,13 +245,14 @@ body {
   padding: 0.1em 0.35em;
 }
 
-/* Code blocks, tables and images may exceed the text column — long lines in a
-   manual should not force a horizontal scroll at 720px. */
+/* Code and tables fill the text column and scroll inside themselves when they
+   need more. They used to break out past the column, but the sidebar and rail
+   leave no room for it — the block ended up overlapping both. */
 .doc pre,
 .doc .table-scroll,
 .doc img {
-  max-width: var(--content-wide);
   width: 100%;
+  max-width: 100%;
 }
 
 .doc pre {
