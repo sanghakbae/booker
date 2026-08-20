@@ -32,6 +32,8 @@ export default function StyleLab() {
 
   return (
     <>
+      {/* A working page, not published content. */}
+      <meta name="robots" content="noindex, nofollow" />
       <style>{VARIANT_CSS}</style>
 
       <div

@@ -39,22 +39,62 @@ export function PageOrderEditor() {
   const current = rows ?? initial;
   const changed = rows !== null;
 
-  const move = (from: number, to: number) => {
-    if (to < 0 || to >= current.length || from === to) return;
-    const next = [...current];
-    const [item] = next.splice(from, 1);
-    next.splice(to, 0, item);
-    setRows(normalize(next));
+  /** A row plus everything nested under it — what a drag actually moves. */
+  const spanAt = (rows: Row[], index: number) => {
+    let span = 1;
+    while (index + span < rows.length && rows[index + span].depth > rows[index].depth) span++;
+    return span;
   };
 
-  const shift = (index: number, delta: number) => {
-    const next = [...current];
+  /**
+   * Moves the row at `from`, together with its children, so it starts at `to`.
+   * Moving the row alone left its children behind, where they were silently
+   * re-parented to whatever ended up above them.
+   */
+  const move = (from: number, to: number) => {
+    const rows = [...current];
+    if (from === to || to < 0 || to > rows.length) return;
+    const span = spanAt(rows, from);
+    // Dropping a parent inside its own subtree would detach it from the tree.
+    if (to > from && to < from + span) return;
+
+    const block = rows.splice(from, span);
+    rows.splice(to > from ? to - span : to, 0, ...block);
+    setRows(normalize(rows));
+  };
+
+  /** Swaps the row's subtree with the sibling block above or below it. */
+  const nudge = (index: number, direction: -1 | 1) => {
+    const rows = current;
+    const span = spanAt(rows, index);
+
+    if (direction === 1) {
+      const next = index + span;
+      if (next >= rows.length) return;
+      move(index, next + spanAt(rows, next));
+      return;
+    }
+
+    let previous = index - 1;
+    while (previous > 0 && rows[previous].depth > rows[index].depth) previous--;
+    if (previous < 0) return;
+    move(index, previous);
+  };
+
+  /** Indent or outdent, carrying the children along. */
+  const shiftBlock = (index: number, delta: number) => {
+    const rows = [...current];
+    const span = spanAt(rows, index);
     // A row can only nest one level deeper than the row above it.
-    const max = index === 0 ? 0 : next[index - 1].depth + 1;
-    const depth = Math.min(Math.max(0, next[index].depth + delta), max);
-    if (depth === next[index].depth) return;
-    next[index] = { ...next[index], depth };
-    setRows(normalize(next));
+    const max = index === 0 ? 0 : rows[index - 1].depth + 1;
+    const depth = Math.min(Math.max(0, rows[index].depth + delta), max);
+    const applied = depth - rows[index].depth;
+    if (applied === 0) return;
+
+    for (let i = index; i < index + span; i++) {
+      rows[i] = { ...rows[i], depth: Math.max(0, rows[i].depth + applied) };
+    }
+    setRows(normalize(rows));
   };
 
   /** Re-clamps depths after a move so no row skips a level. */
@@ -119,10 +159,10 @@ export function PageOrderEditor() {
 
             <div className="flex shrink-0 items-center">
               {[
-                { label: "위로", sign: "↑", run: () => move(index, index - 1) },
-                { label: "아래로", sign: "↓", run: () => move(index, index + 1) },
-                { label: "상위로", sign: "⇤", run: () => shift(index, -1) },
-                { label: "하위로", sign: "⇥", run: () => shift(index, 1) },
+                { label: "위로", sign: "↑", run: () => nudge(index, -1) },
+                { label: "아래로", sign: "↓", run: () => nudge(index, 1) },
+                { label: "상위로", sign: "⇤", run: () => shiftBlock(index, -1) },
+                { label: "하위로", sign: "⇥", run: () => shiftBlock(index, 1) },
               ].map((action) => (
                 <button
                   key={action.label}

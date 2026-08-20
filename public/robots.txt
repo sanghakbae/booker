@@ -1,0 +1,6 @@
+User-agent: *
+# Working files, not part of the published manuals.
+Disallow: /style-lab
+Disallow: /_seed/
+
+Sitemap: https://booker.sanghak.kr/sitemap.xml

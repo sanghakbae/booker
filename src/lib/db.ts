@@ -1,6 +1,8 @@
 import {
   addDoc,
   collection,
+  type DocumentData,
+  type DocumentReference,
   deleteDoc,
   doc,
   getDoc,
@@ -21,6 +23,30 @@ const pagesRef = (spaceId: string) => collection(db, "spaces", spaceId, "pages")
 const draftsRef = (spaceId: string) => collection(db, "spaces", spaceId, "drafts");
 const versionsRef = (spaceId: string) => collection(db, "spaces", spaceId, "versions");
 const feedbackRef = (spaceId: string) => collection(db, "spaces", spaceId, "feedback");
+
+type Write =
+  | { kind: "set"; ref: DocumentReference; data: DocumentData }
+  | { kind: "delete"; ref: DocumentReference }
+  | { kind: "update"; ref: DocumentReference; data: DocumentData };
+
+/**
+ * Firestore caps a batch at 500 writes, and a manual with many documents and a
+ * long publish history goes past that. Chunking gives up atomicity, so callers
+ * that copy data must order their writes so the copy lands before the original
+ * is removed: an interrupted run then leaves duplicates, not a hole.
+ */
+async function commitWrites(writes: Write[]) {
+  const LIMIT = 400;
+  for (let i = 0; i < writes.length; i += LIMIT) {
+    const batch = writeBatch(db);
+    for (const write of writes.slice(i, i + LIMIT)) {
+      if (write.kind === "set") batch.set(write.ref, write.data);
+      else if (write.kind === "update") batch.update(write.ref, write.data);
+      else batch.delete(write.ref);
+    }
+    await batch.commit();
+  }
+}
 
 export function slugify(input: string) {
   const s = input
@@ -113,31 +139,49 @@ export async function moveSpace(space: Space, nextSlug: string) {
     throw new Error(`이미 사용 중인 주소입니다: /${nextSlug}`);
   }
 
-  const [pages, drafts] = await Promise.all([listAllPages(space.id), listDrafts(space.id)]);
+  // Every subcollection has to come along. Versions and feedback used to be
+  // left behind, and because the rules resolve permission through the parent
+  // space document, deleting the old space made them unreadable as well.
+  const [pages, drafts, versions, feedback] = await Promise.all([
+    listAllPages(space.id),
+    listDrafts(space.id),
+    getDocs(versionsRef(space.id)),
+    getDocs(feedbackRef(space.id)),
+  ]);
 
-  const batch = writeBatch(db);
-  batch.set(doc(db, "spaces", nextSlug), {
-    slug: nextSlug,
-    title: space.title,
-    description: space.description,
-    ownerId: space.ownerId,
-    editorEmails: space.editorEmails ?? [],
-    visibility: space.visibility,
-    createdAt: space.createdAt ?? serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  for (const page of pages) {
-    const { id, ...rest } = page;
-    batch.set(doc(db, "spaces", nextSlug, "pages", id), rest);
-    batch.delete(doc(db, "spaces", space.id, "pages", id));
-  }
-  for (const draft of drafts) {
-    const { id, ...rest } = draft;
-    batch.set(doc(db, "spaces", nextSlug, "drafts", id), rest);
-    batch.delete(doc(db, "spaces", space.id, "drafts", id));
-  }
-  batch.delete(doc(db, "spaces", space.id));
-  await batch.commit();
+  const copies: Write[] = [
+    {
+      kind: "set",
+      ref: doc(db, "spaces", nextSlug),
+      data: {
+        slug: nextSlug,
+        title: space.title,
+        description: space.description,
+        ownerId: space.ownerId,
+        editorEmails: space.editorEmails ?? [],
+        visibility: space.visibility,
+        createdAt: space.createdAt ?? serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      },
+    },
+  ];
+  const removals: Write[] = [];
+
+  const carry = (name: string, id: string, data: DocumentData) => {
+    copies.push({ kind: "set", ref: doc(db, "spaces", nextSlug, name, id), data });
+    removals.push({ kind: "delete", ref: doc(db, "spaces", space.id, name, id) });
+  };
+
+  for (const { id, ...rest } of pages) carry("pages", id, rest);
+  for (const { id, ...rest } of drafts) carry("drafts", id, rest);
+  for (const d of versions.docs) carry("versions", d.id, d.data());
+  for (const d of feedback.docs) carry("feedback", d.id, d.data());
+
+  removals.push({ kind: "delete", ref: doc(db, "spaces", space.id) });
+
+  // Copy first, then remove, so a failure in between is recoverable.
+  await commitWrites(copies);
+  await commitWrites(removals);
   return nextSlug;
 }
 
@@ -148,13 +192,17 @@ export async function deleteSpace(spaceId: string) {
     getDocs(versionsRef(spaceId)),
     getDocs(feedbackRef(spaceId)),
   ]);
-  const batch = writeBatch(db);
-  pages.forEach((p) => batch.delete(doc(db, "spaces", spaceId, "pages", p.id)));
-  drafts.forEach((d) => batch.delete(doc(db, "spaces", spaceId, "drafts", d.id)));
-  versions.docs.forEach((v) => batch.delete(v.ref));
-  feedback.docs.forEach((f) => batch.delete(f.ref));
-  batch.delete(doc(db, "spaces", spaceId));
-  await batch.commit();
+
+  const writes: Write[] = [
+    ...pages.map((p) => ({ kind: "delete" as const, ref: doc(db, "spaces", spaceId, "pages", p.id) })),
+    ...drafts.map((d) => ({ kind: "delete" as const, ref: doc(db, "spaces", spaceId, "drafts", d.id) })),
+    ...versions.docs.map((v) => ({ kind: "delete" as const, ref: v.ref })),
+    ...feedback.docs.map((f) => ({ kind: "delete" as const, ref: f.ref })),
+    // The space document goes last: while it exists, the rules can still
+    // resolve permission for everything underneath it.
+    { kind: "delete", ref: doc(db, "spaces", spaceId) },
+  ];
+  await commitWrites(writes);
 }
 
 // --- pages ----------------------------------------------------------------
@@ -276,18 +324,19 @@ export async function updatePage(spaceId: string, pageId: string, patch: Partial
 export async function deletePage(spaceId: string, pageId: string) {
   const pages = await listAllPages(spaceId);
   const removed = pages.find((p) => p.id === pageId);
-  const batch = writeBatch(db);
-  // Re-parent children so nothing is orphaned.
-  pages
+
+  const writes: Write[] = pages
     .filter((p) => p.parentId === pageId)
-    .forEach((p) =>
-      batch.update(doc(db, "spaces", spaceId, "pages", p.id), {
-        parentId: removed?.parentId ?? null,
-      })
-    );
-  batch.delete(doc(db, "spaces", spaceId, "pages", pageId));
-  batch.delete(doc(db, "spaces", spaceId, "drafts", pageId));
-  await batch.commit();
+    // Re-parent children so nothing is orphaned.
+    .map((p) => ({
+      kind: "update" as const,
+      ref: doc(db, "spaces", spaceId, "pages", p.id),
+      data: { parentId: removed?.parentId ?? null },
+    }));
+
+  writes.push({ kind: "delete", ref: doc(db, "spaces", spaceId, "pages", pageId) });
+  writes.push({ kind: "delete", ref: doc(db, "spaces", spaceId, "drafts", pageId) });
+  await commitWrites(writes);
 }
 
 /** Writes a whole reordered tree in one go. */
@@ -295,14 +344,13 @@ export async function savePageOrder(
   spaceId: string,
   items: Array<{ id: string; parentId: string | null; order: number }>
 ) {
-  const batch = writeBatch(db);
-  for (const item of items) {
-    batch.update(doc(db, "spaces", spaceId, "pages", item.id), {
-      parentId: item.parentId,
-      order: item.order,
-    });
-  }
-  await batch.commit();
+  await commitWrites(
+    items.map((item) => ({
+      kind: "update" as const,
+      ref: doc(db, "spaces", spaceId, "pages", item.id),
+      data: { parentId: item.parentId, order: item.order },
+    }))
+  );
 }
 
 /**
@@ -316,18 +364,26 @@ export async function migrateLegacyPages(spaceId: string): Promise<boolean> {
   const legacy = snap.docs.filter((d) => d.data().published === undefined);
   if (legacy.length === 0) return false;
 
-  const batch = writeBatch(db);
+  const writes: Write[] = [];
   for (const d of legacy) {
     const data = d.data();
-    batch.update(d.ref, { published: true, publishedAt: data.updatedAt ?? serverTimestamp() });
-    batch.set(doc(db, "spaces", spaceId, "drafts", d.id), {
-      title: data.title ?? "제목 없음",
-      content: data.content ?? "",
-      parentId: data.parentId ?? null,
-      updatedAt: serverTimestamp(),
+    writes.push({
+      kind: "update",
+      ref: d.ref,
+      data: { published: true, publishedAt: data.updatedAt ?? serverTimestamp() },
+    });
+    writes.push({
+      kind: "set",
+      ref: doc(db, "spaces", spaceId, "drafts", d.id),
+      data: {
+        title: data.title ?? "제목 없음",
+        content: data.content ?? "",
+        parentId: data.parentId ?? null,
+        updatedAt: serverTimestamp(),
+      },
     });
   }
-  await batch.commit();
+  await commitWrites(writes);
   return true;
 }
 
