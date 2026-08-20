@@ -1,31 +1,83 @@
 /**
- * The bOOker wordmark: the two O's are eyes, both looking down and to the
- * right. Sized in `em` so it scales with whatever type size it sits in, and
- * exposed to assistive tech as plain text.
+ * The bOOker wordmark: each capital O holds an eyeball, both looking down and
+ * to the right.
+ *
+ * The O is drawn rather than typeset. Overlaying a pupil on the real glyph
+ * means guessing where the baseline sits inside the line box, which drifts with
+ * line-height; drawing the ring puts the letter and the eye in one coordinate
+ * system. The measurements come from Geist SemiBold's own capital O, so it
+ * still matches the surrounding letters:
+ *
+ *   outer diameter 0.736em · stroke 0.145em · counter 0.446em
+ *   centre 0.358em above the baseline · advance 0.763em
+ *
+ * Units below are hundredths of an em.
  */
-function Eye({ className = "" }: { className?: string }) {
+const OUTER = 73.6;
+const STROKE = 14.5;
+const CENTRE = OUTER / 2;
+const RING_RADIUS = (OUTER - STROKE) / 2;
+
+const PUPIL_RADIUS = 11.5;
+/**
+ * How far the pupil sits toward the lower right. The diagonal offset has to
+ * stay inside the counter: GAZE × √2 < (counter radius 22.3 − pupil 11.5).
+ */
+const GAZE = 6.5;
+
+const EM = OUTER / 100; // 0.736em
+const BASELINE_OFFSET = 0.358 - EM / 2; // puts the centre on the O's centre
+const SIDE_BEARING = (0.763 - EM) / 2;
+
+function EyeO() {
   return (
     <svg
-      viewBox="0 0 20 20"
-      className={`inline-block h-[0.82em] w-[0.82em] align-baseline ${className}`}
-      style={{ transform: "translateY(0.04em)" }}
+      viewBox={`0 0 ${OUTER} ${OUTER}`}
+      width={`${EM}em`}
+      height={`${EM}em`}
+      style={{
+        verticalAlign: `${BASELINE_OFFSET}em`,
+        marginInline: `${SIDE_BEARING}em`,
+      }}
+      className="inline-block"
       aria-hidden
     >
-      <circle cx="10" cy="10" r="8.6" fill="var(--background)" stroke="currentColor" strokeWidth="2.2" />
-      {/* Pupil pushed toward the lower right — the whole set shares one gaze. */}
-      <circle cx="13" cy="13" r="3.9" fill="currentColor" />
-      <circle cx="11.4" cy="11.4" r="1.15" fill="var(--background)" opacity="0.9" />
+      {/* The letter itself. */}
+      <circle
+        cx={CENTRE}
+        cy={CENTRE}
+        r={RING_RADIUS}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={STROKE}
+      />
+      {/* Pupil and catchlight inside the counter. Two shapes, not one dot —
+          a bare dot reads as a radio button rather than an eye. */}
+      <circle
+        cx={CENTRE + GAZE}
+        cy={CENTRE + GAZE}
+        r={PUPIL_RADIUS}
+        fill="var(--foreground)"
+      />
+      <circle
+        cx={CENTRE + GAZE - 3.9}
+        cy={CENTRE + GAZE - 3.9}
+        r={4.2}
+        fill="var(--background)"
+        opacity="0.92"
+      />
     </svg>
   );
 }
 
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-baseline font-semibold tracking-tight ${className}`}>
+    <span className={`font-semibold tracking-tight ${className}`}>
       <span aria-hidden>b</span>
-      <span className="mx-[0.06em] inline-flex gap-[0.08em] text-accent" aria-hidden>
-        <Eye />
-        <Eye />
+      {/* The eyes carry the accent colour; the rest of the mark stays as text. */}
+      <span className="text-accent" aria-hidden>
+        <EyeO />
+        <EyeO />
       </span>
       <span aria-hidden>ker</span>
       <span className="sr-only">bOOker</span>
