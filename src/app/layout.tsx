@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { LocaleProvider } from "@/components/LocaleProvider";
+import { SiteChrome } from "@/components/SiteChrome";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -21,9 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <LocaleProvider>
           <AuthProvider>
-            <Header />
-            {children}
-            <Footer />
+            <SiteChrome>{children}</SiteChrome>
           </AuthProvider>
         </LocaleProvider>
       </body>

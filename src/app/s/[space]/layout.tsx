@@ -1,3 +1,4 @@
+import { ManualFooter, ManualHeader } from "@/components/ManualHeader";
 import { SpaceProvider } from "@/components/SpaceProvider";
 import { atLeastOne, FALLBACK_SLUG, getPublishedSpaces } from "@/lib/build-data";
 import { toPages, toSpace } from "@/lib/prerender";
@@ -27,7 +28,9 @@ export default async function SpaceLayout({
       initialSpace={built ? toSpace(built) : null}
       initialPages={built ? toPages(built) : []}
     >
+      <ManualHeader />
       {children}
+      <ManualFooter />
     </SpaceProvider>
   );
 }
