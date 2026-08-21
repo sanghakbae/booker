@@ -50,7 +50,10 @@ export default function LandingPage() {
         <div style={{ maxWidth: "var(--content-width)" }}>
           <Wordmark className="text-3xl" />
 
-          <h1 className="brand-text mt-7 text-4xl font-bold leading-[1.18] tracking-tight sm:text-5xl">
+          {/* The break sits on the comma — a clause boundary — so the two lines
+              read as a deliberate pair. `text-balance` keeps the rag even when
+              the line wraps on its own anyway. */}
+          <h1 className="brand-text mt-7 text-balance text-4xl font-bold leading-[1.18] tracking-tight sm:text-5xl">
             매뉴얼을 쓰고,
             <br />
             공개하세요

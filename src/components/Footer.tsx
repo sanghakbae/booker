@@ -2,7 +2,10 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-border">
+    /* Deliberately not pinned to the bottom of the window: mt-auto added
+       whatever slack the viewport had left, so the gap above the footer grew
+       with window height instead of staying at the spacing we set. */
+    <footer className="border-t border-border">
       <div
         style={{ maxWidth: "var(--container-width)" }}
         className="mx-auto flex w-full flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-sm text-muted"
