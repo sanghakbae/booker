@@ -10,8 +10,10 @@ import {
   slugify,
   updateSpace,
 } from "@/lib/db";
+import type { MessageKey } from "@/lib/i18n";
 import type { Feedback } from "@/lib/types";
 import { EmptyState, Loading } from "./Loading";
+import { useLocale, useT } from "./LocaleProvider";
 import { MobileNav } from "./MobileNav";
 import { PageOrderEditor } from "./PageOrderEditor";
 import { Sidebar } from "./Sidebar";
@@ -19,22 +21,23 @@ import { useSpace } from "./SpaceProvider";
 
 type Tab = "general" | "order" | "editors" | "feedback" | "danger";
 
-const TABS: Array<{ id: Tab; label: string; ownerOnly?: boolean }> = [
-  { id: "general", label: "기본 정보" },
-  { id: "order", label: "문서 순서" },
-  { id: "editors", label: "편집자", ownerOnly: true },
-  { id: "feedback", label: "피드백" },
-  { id: "danger", label: "매뉴얼 삭제", ownerOnly: true },
+const TABS: Array<{ id: Tab; key: MessageKey; ownerOnly?: boolean }> = [
+  { id: "general", key: "settings.tabGeneral" },
+  { id: "order", key: "settings.tabOrder" },
+  { id: "editors", key: "settings.tabEditors", ownerOnly: true },
+  { id: "feedback", key: "settings.tabFeedback" },
+  { id: "danger", key: "settings.tabDanger", ownerOnly: true },
 ];
 
 export function SpaceSettings() {
   const { space, loading, canEdit, isOwner, refresh } = useSpace();
   const router = useRouter();
+  const t = useT();
   const [tab, setTab] = useState<Tab>("general");
 
-  if (loading) return <Loading />;
-  if (!space) return <EmptyState title="매뉴얼을 찾을 수 없습니다" />;
-  if (!canEdit) return <EmptyState title="설정을 볼 권한이 없습니다" />;
+  if (loading) return <Loading label={t("common.loading")} />;
+  if (!space) return <EmptyState title={t("reader.spaceNotFound")} />;
+  if (!canEdit) return <EmptyState title={t("settings.noPermission")} />;
 
   const visible = TABS.filter((t) => !t.ownerOnly || isOwner);
 
@@ -49,24 +52,24 @@ export function SpaceSettings() {
         <Sidebar />
 
         <main className="min-w-0 flex-1 py-10 md:px-10">
-          <h1 className="text-2xl font-bold">{space.title} 설정</h1>
+          <h1 className="text-2xl font-bold">{t("settings.title", { title: space.title })}</h1>
 
           {/* Wrapping rather than scrolling: a horizontally scrolled strip just
               looked like the last tab had been cut off. */}
           <div className="mt-6 flex flex-wrap gap-x-1 border-b border-border" role="tablist">
-            {visible.map((t) => (
+            {visible.map((tabItem) => (
               <button
-                key={t.id}
+                key={tabItem.id}
                 role="tab"
-                aria-selected={tab === t.id}
-                onClick={() => setTab(t.id)}
+                aria-selected={tab === tabItem.id}
+                onClick={() => setTab(tabItem.id)}
                 className={`border-b-2 px-3 py-2.5 text-sm ${
-                  tab === t.id
+                  tab === tabItem.id
                     ? "border-accent font-medium text-accent"
                     : "border-transparent text-muted hover:text-foreground"
                 }`}
               >
-                {t.label}
+                {t(tabItem.key)}
               </button>
             ))}
           </div>
@@ -93,6 +96,7 @@ export function SpaceSettings() {
 function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
   const { space } = useSpace();
   const router = useRouter();
+  const t = useT();
   const [title, setTitle] = useState(space?.title ?? "");
   const [description, setDescription] = useState(space?.description ?? "");
   const [visibility, setVisibility] = useState(space?.visibility ?? "public");
@@ -116,7 +120,7 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
       if (slugChanged) {
         // The document ID is the slug, so this rewrites every document.
         const ok = window.confirm(
-          `주소를 /${space.slug} 에서 /${nextSlug} 로 바꾸면 기존 링크는 더 이상 열리지 않습니다. 계속할까요?`
+          t("settings.slugWillChange", { from: space.slug, to: nextSlug })
         );
         if (!ok) {
           setBusy(false);
@@ -128,7 +132,7 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
       }
 
       await onSaved();
-      setMessage("저장했습니다.");
+      setMessage(t("settings.savedMessage"));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -138,7 +142,7 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
 
   return (
     <form onSubmit={submit} className="space-y-6">
-      <Field label="이름">
+      <Field label={t("new.name")}>
         <input
           required
           value={title}
@@ -148,10 +152,10 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
       </Field>
 
       <Field
-        label="주소"
+        label={t("new.slug")}
         hint={
           slugChanged
-            ? `바뀝니다: /s/${space.slug} → /s/${nextSlug} · 기존 링크는 끊깁니다`
+            ? t("settings.slugWillChange", { from: space.slug, to: nextSlug })
             : `booker.sanghak.kr/s/${space.slug}`
         }
       >
@@ -162,7 +166,7 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
         />
       </Field>
 
-      <Field label="설명">
+      <Field label={t("new.description")}>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -171,12 +175,12 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
         />
       </Field>
 
-      <Field label="공개 범위">
+      <Field label={t("new.visibility")}>
         <div className="flex flex-wrap gap-4 text-sm">
           {(["public", "private"] as const).map((v) => (
             <label key={v} className="flex items-center gap-2">
               <input type="radio" checked={visibility === v} onChange={() => setVisibility(v)} />
-              {v === "public" ? "공개 — 누구나 읽을 수 있음" : "비공개 — 편집자만 볼 수 있음"}
+              {v === "public" ? t("new.publicLabel") : t("settings.privateLabel")}
             </label>
           ))}
         </div>
@@ -190,7 +194,7 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
         disabled={busy || !title.trim()}
         className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
       >
-        {busy ? "저장 중…" : "저장"}
+        {busy ? t("common.saving") : t("common.save")}
       </button>
     </form>
   );
@@ -198,6 +202,7 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
 
 function EditorsTab({ onSaved }: { onSaved: () => Promise<void> }) {
   const { space } = useSpace();
+  const t = useT();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -224,11 +229,11 @@ function EditorsTab({ onSaved }: { onSaved: () => Promise<void> }) {
     const value = email.trim().toLowerCase();
     if (!value) return;
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) {
-      setError("올바른 이메일 주소가 아닙니다.");
+      setError(t("settings.invalidEmail"));
       return;
     }
     if (editors.includes(value)) {
-      setError("이미 초대된 사람입니다.");
+      setError(t("settings.alreadyInvited"));
       return;
     }
     await change([...editors, value]);
@@ -237,8 +242,7 @@ function EditorsTab({ onSaved }: { onSaved: () => Promise<void> }) {
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted">
-        초대한 이메일로 Google 로그인하면 이 매뉴얼의 문서를 편집할 수 있습니다. 매뉴얼 설정과
-        삭제는 소유자만 할 수 있습니다.
+        {t("settings.editorsNote")}
       </p>
 
       <form onSubmit={add} className="flex gap-2">
@@ -247,7 +251,7 @@ function EditorsTab({ onSaved }: { onSaved: () => Promise<void> }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="editor@example.com"
-          aria-label="초대할 이메일"
+          aria-label={t("settings.inviteEmail")}
           className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2"
         />
         <button
@@ -255,7 +259,7 @@ function EditorsTab({ onSaved }: { onSaved: () => Promise<void> }) {
           disabled={busy}
           className="shrink-0 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
         >
-          초대
+          {t("settings.invite")}
         </button>
       </form>
 
@@ -263,8 +267,8 @@ function EditorsTab({ onSaved }: { onSaved: () => Promise<void> }) {
 
       <ul className="divide-y divide-border rounded-lg border border-border">
         <li className="flex items-center justify-between px-4 py-3">
-          <span className="text-sm">{space.ownerId ? "소유자" : ""}</span>
-          <span className="text-xs text-muted">모든 권한</span>
+          <span className="text-sm">{t("common.owner")}</span>
+          <span className="text-xs text-muted">{t("settings.allPermissions")}</span>
         </li>
         {editors.map((address) => (
           <li key={address} className="flex items-center justify-between gap-3 px-4 py-3">
@@ -274,12 +278,12 @@ function EditorsTab({ onSaved }: { onSaved: () => Promise<void> }) {
               disabled={busy}
               className="shrink-0 text-sm text-red-500 hover:underline"
             >
-              제거
+              {t("settings.remove")}
             </button>
           </li>
         ))}
         {editors.length === 0 && (
-          <li className="px-4 py-3 text-sm text-muted">아직 초대한 편집자가 없습니다.</li>
+          <li className="px-4 py-3 text-sm text-muted">{t("settings.noEditors")}</li>
         )}
       </ul>
     </div>
@@ -288,6 +292,7 @@ function EditorsTab({ onSaved }: { onSaved: () => Promise<void> }) {
 
 function FeedbackTab() {
   const { space } = useSpace();
+  const { locale, t } = useLocale();
   const [items, setItems] = useState<Feedback[] | null>(null);
 
   useEffect(() => {
@@ -298,9 +303,9 @@ function FeedbackTab() {
   }, [space]);
 
   if (!space) return null;
-  if (items === null) return <p className="text-sm text-muted">불러오는 중…</p>;
+  if (items === null) return <p className="text-sm text-muted">{t("common.loading")}…</p>;
   if (items.length === 0) {
-    return <p className="text-sm text-muted">아직 받은 피드백이 없습니다.</p>;
+    return <p className="text-sm text-muted">{t("settings.noFeedback")}</p>;
   }
 
   const helpful = items.filter((i) => i.helpful).length;
@@ -313,8 +318,11 @@ function FeedbackTab() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted">
-        전체 {items.length}건 중 도움이 되었다는 응답 {helpful}건 (
-        {Math.round((helpful / items.length) * 100)}%)
+        {t("settings.feedbackSummary", {
+          total: items.length,
+          helpful,
+          percent: Math.round((helpful / items.length) * 100),
+        })}
       </p>
 
       <ul className="divide-y divide-border rounded-lg border border-border">
@@ -327,14 +335,14 @@ function FeedbackTab() {
               <p className="text-sm font-medium">{item.pageSlug}</p>
               {item.comment && <p className="mt-1 text-sm text-muted">{item.comment}</p>}
               <p className="mt-1 text-xs text-muted">
-                {item.createdAt?.toDate?.().toLocaleString("ko-KR") ?? ""}
+                {item.createdAt?.toDate?.().toLocaleString(locale) ?? ""}
               </p>
             </div>
             <button
               onClick={() => remove(item.id)}
               className="shrink-0 text-sm text-muted hover:text-red-500"
             >
-              삭제
+              {t("common.delete")}
             </button>
           </li>
         ))}
@@ -345,6 +353,7 @@ function FeedbackTab() {
 
 function DangerTab({ onDeleted }: { onDeleted: () => void }) {
   const { space } = useSpace();
+  const t = useT();
   const [confirmText, setConfirmText] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -357,22 +366,23 @@ function DangerTab({ onDeleted }: { onDeleted: () => void }) {
       await deleteSpace(space.id);
       onDeleted();
     } catch (err) {
-      window.alert(`삭제에 실패했습니다: ${(err as Error).message}`);
+      window.alert(t("settings.deleteFailed", { message: (err as Error).message }));
       setBusy(false);
     }
   };
 
   return (
     <div className="rounded-lg border border-red-500/40 p-5">
-      <h2 className="font-medium text-red-500">매뉴얼 삭제</h2>
+      <h2 className="font-medium text-red-500">{t("settings.dangerTitle")}</h2>
       <p className="mt-2 text-sm text-muted">
-        모든 문서, 초안, 발행 이력, 피드백이 함께 사라집니다. 되돌릴 수 없습니다. 확인을 위해
-        매뉴얼 주소 <code className="rounded bg-surface px-1">{space.slug}</code>를 입력하세요.
+        {t("settings.dangerBody")}{" "}
+        <code className="rounded bg-surface px-1">{space.slug}</code>
+        {t("settings.dangerBodyTail")}
       </p>
       <input
         value={confirmText}
         onChange={(e) => setConfirmText(e.target.value)}
-        aria-label="삭제 확인"
+        aria-label={t("settings.confirmDelete")}
         className="mt-4 w-full rounded-md border border-input bg-background px-3 py-2"
       />
       <button
@@ -380,7 +390,7 @@ function DangerTab({ onDeleted }: { onDeleted: () => void }) {
         disabled={busy || confirmText !== space.slug}
         className="mt-4 rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
       >
-        {busy ? "삭제 중…" : "영구 삭제"}
+        {busy ? t("common.deleting") : t("settings.permanentDelete")}
       </button>
     </div>
   );

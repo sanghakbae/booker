@@ -9,11 +9,13 @@ import {
 } from "firebase/auth";
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, initAnalytics } from "@/lib/firebase";
+import type { MessageKey } from "@/lib/i18n";
 
 type AuthState = {
   user: User | null;
   loading: boolean;
-  error: string;
+  /** Either a translatable key or, for unexpected failures, raw text. */
+  error: { key?: MessageKey; text?: string } | null;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -21,7 +23,7 @@ type AuthState = {
 const AuthContext = createContext<AuthState>({
   user: null,
   loading: true,
-  error: "",
+  error: null,
   signIn: async () => {},
   signOut: async () => {},
 });
@@ -36,7 +38,7 @@ const SILENT = new Set([
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<AuthState["error"]>(null);
 
   useEffect(() => {
     void initAnalytics();
@@ -47,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       },
       (err) => {
-        setError(err.message);
+        setError({ text: err.message });
         setLoading(false);
       }
     );
@@ -56,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Auth failures are reported through `error`, never as a rejected promise —
   // an unhandled rejection here surfaces as a full-page Next.js error overlay.
   const signIn = async () => {
-    setError("");
+    setError(null);
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (err) {
@@ -69,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await fbSignOut(auth);
     } catch (err) {
-      setError((err as Error).message);
+      setError({ text: (err as Error).message });
     }
   };
 
@@ -80,18 +82,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-function describe(code: string, fallback: string) {
+function describe(code: string, fallback: string): AuthState["error"] {
   switch (code) {
     case "auth/operation-not-allowed":
-      return "Firebase 콘솔에서 Google 로그인이 아직 활성화되지 않았습니다.";
+      return { key: "auth.notAllowed" };
     case "auth/unauthorized-domain":
-      return "이 도메인은 Firebase 승인 도메인 목록에 없습니다.";
+      return { key: "auth.unauthorizedDomain" };
     case "auth/popup-blocked":
-      return "브라우저가 로그인 팝업을 차단했습니다. 팝업을 허용해 주세요.";
+      return { key: "auth.popupBlocked" };
     case "auth/network-request-failed":
-      return "네트워크 오류로 로그인하지 못했습니다.";
+      return { key: "auth.networkFailed" };
     default:
-      return fallback;
+      return { text: fallback };
   }
 }
 

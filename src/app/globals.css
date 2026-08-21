@@ -341,10 +341,13 @@ body {
 /* ---- Print / PDF export ------------------------------------------------ */
 
 @media print {
-  /* Header, sidebars and controls are screen furniture, not part of the manual. */
+  /* Header, sidebars and controls are screen furniture, not part of the
+     manual. Marked with an attribute rather than matched on aria-label, which
+     changes with the interface language. */
   header,
-  nav[aria-label="문서 목록"],
-  aside {
+  footer,
+  aside,
+  [data-screen-only] {
     display: none !important;
   }
 

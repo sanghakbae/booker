@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { SearchIcon } from "./Icons";
+import { useT } from "./LocaleProvider";
 
 type Entry = {
   spaceSlug: string;
@@ -14,6 +15,7 @@ type Entry = {
 
 /** Search across every published manual, using the index baked at build time. */
 export function GlobalSearch() {
+  const t = useT();
   const [index, setIndex] = useState<Entry[] | null>(null);
   const [query, setQuery] = useState("");
 
@@ -50,8 +52,8 @@ export function GlobalSearch() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="모든 매뉴얼에서 검색"
-          aria-label="모든 매뉴얼에서 검색"
+          placeholder={t("search.globalPlaceholder")}
+          aria-label={t("search.globalPlaceholder")}
           className="w-full rounded-lg border border-input bg-background py-3 pl-10 pr-4"
         />
       </div>
@@ -59,9 +61,9 @@ export function GlobalSearch() {
       {query.trim() && (
         <div className="mt-4 rounded-lg border border-border">
           {index === null ? (
-            <p className="px-4 py-3 text-sm text-muted">색인을 불러오는 중…</p>
+            <p className="px-4 py-3 text-sm text-muted">{t("search.loadingIndex")}</p>
           ) : results.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-muted">검색 결과가 없습니다.</p>
+            <p className="px-4 py-3 text-sm text-muted">{t("sidebar.noResults")}</p>
           ) : (
             <ul className="divide-y divide-border">
               {results.map(({ entry, snippet }) => (

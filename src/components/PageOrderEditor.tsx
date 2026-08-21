@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { flattenTree, savePageOrder } from "@/lib/db";
 import type { PageNode } from "@/lib/types";
+import { useT } from "./LocaleProvider";
 import { useSpace } from "./SpaceProvider";
 
 type Row = { id: string; title: string; published: boolean; depth: number };
@@ -31,6 +32,7 @@ function toTreeUpdates(rows: Row[]) {
 
 export function PageOrderEditor() {
   const { space, tree, refresh } = useSpace();
+  const t = useT();
   const initial = useMemo(() => toRows(tree), [tree]);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
@@ -112,20 +114,20 @@ export function PageOrderEditor() {
       await refresh();
       setRows(null);
     } catch (err) {
-      window.alert(`저장에 실패했습니다: ${(err as Error).message}`);
+      window.alert(t("order.saveFailed", { message: (err as Error).message }));
     } finally {
       setSaving(false);
     }
   };
 
   if (flattenTree(tree).length === 0) {
-    return <p className="text-sm text-muted">아직 문서가 없습니다.</p>;
+    return <p className="text-sm text-muted">{t("sidebar.noDocs")}</p>;
   }
 
   return (
     <div>
       <p className="mb-4 text-sm text-muted">
-        끌어서 순서를 바꾸고, 화살표로 상위·하위를 조정합니다.
+        {t("order.hint")}
       </p>
 
       <ul className="overflow-hidden rounded-lg border border-border">
@@ -153,16 +155,16 @@ export function PageOrderEditor() {
             <span className="min-w-0 flex-1 truncate text-sm">{row.title}</span>
             {!row.published && (
               <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-xs text-muted">
-                초안
+                {t("sidebar.draft")}
               </span>
             )}
 
             <div className="flex shrink-0 items-center">
               {[
-                { label: "위로", sign: "↑", run: () => nudge(index, -1) },
-                { label: "아래로", sign: "↓", run: () => nudge(index, 1) },
-                { label: "상위로", sign: "⇤", run: () => shiftBlock(index, -1) },
-                { label: "하위로", sign: "⇥", run: () => shiftBlock(index, 1) },
+                { label: t("order.up"), sign: "↑", run: () => nudge(index, -1) },
+                { label: t("order.down"), sign: "↓", run: () => nudge(index, 1) },
+                { label: t("order.outdent"), sign: "⇤", run: () => shiftBlock(index, -1) },
+                { label: t("order.indent"), sign: "⇥", run: () => shiftBlock(index, 1) },
               ].map((action) => (
                 <button
                   key={action.label}
@@ -184,11 +186,11 @@ export function PageOrderEditor() {
           disabled={!changed || saving}
           className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
         >
-          {saving ? "저장 중…" : "순서 저장"}
+          {saving ? t("common.saving") : t("order.save")}
         </button>
         {changed && (
           <button onClick={() => setRows(null)} className="text-sm text-muted hover:text-foreground">
-            되돌리기
+            {t("common.revert")}
           </button>
         )}
       </div>

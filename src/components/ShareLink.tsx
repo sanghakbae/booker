@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { useT } from "./LocaleProvider";
 
 export const SITE_URL = "https://booker.sanghak.kr";
 
@@ -9,6 +10,7 @@ const subscribeNever = () => () => {};
 
 /** The manual's own public address, with one-click copy. */
 export function ShareLink({ spaceSlug }: { spaceSlug: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   // On localhost the useful link is the local one, not the production domain.
@@ -28,13 +30,13 @@ export function ShareLink({ spaceSlug }: { spaceSlug: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      window.prompt("링크를 복사하세요", url);
+      window.prompt(t("sidebar.copyPrompt"), url);
     }
   };
 
   return (
     <div className="mt-6 rounded-md border border-border p-3">
-      <p className="text-xs font-medium text-muted">이 매뉴얼의 공개 링크</p>
+      <p className="text-xs font-medium text-muted">{t("sidebar.shareTitle")}</p>
       <p className="mt-1 truncate font-mono text-xs" title={url}>
         {shown}
       </p>
@@ -42,7 +44,7 @@ export function ShareLink({ spaceSlug }: { spaceSlug: string }) {
         onClick={copy}
         className="mt-2 w-full rounded border border-border py-1 text-xs hover:bg-surface"
       >
-        {copied ? "복사했습니다" : "링크 복사"}
+        {copied ? t("sidebar.copied") : t("sidebar.copyLink")}
       </button>
     </div>
   );

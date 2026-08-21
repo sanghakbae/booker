@@ -13,6 +13,7 @@ import {
 } from "@/lib/db";
 import type { Version } from "@/lib/types";
 import { EmptyState, Loading } from "./Loading";
+import { useT } from "./LocaleProvider";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { MobileNav } from "./MobileNav";
 import { MoreIcon } from "./Icons";
@@ -24,6 +25,7 @@ export function EditView({ slug }: { slug: string }) {
   const { space, pages, drafts, loading, canEdit, refresh } = useSpace();
   const { user } = useAuth();
   const router = useRouter();
+  const t = useT();
 
   const page = useMemo(() => pages.find((p) => p.slug === slug), [pages, slug]);
   const draft = page ? drafts.get(page.id) : undefined;
@@ -68,7 +70,7 @@ export function EditView({ slug }: { slug: string }) {
     setSaving(true);
     try {
       await saveDraft(space.id, page.id, {
-        title: title.trim() || "제목 없음",
+        title: title.trim() || t("editor.untitled"),
         content,
         parentId,
       });
@@ -76,7 +78,7 @@ export function EditView({ slug }: { slug: string }) {
       // The form is deliberately NOT re-seeded: autosave fires while the user
       // is still typing, and re-seeding would replace their newer text.
     } catch (err) {
-      window.alert(`저장에 실패했습니다: ${(err as Error).message}`);
+      window.alert(t("editor.saveFailed", { message: (err as Error).message }));
     } finally {
       setSaving(false);
     }
@@ -94,12 +96,12 @@ export function EditView({ slug }: { slug: string }) {
     if (!space || !page || publishing) return;
     setPublishing(true);
     try {
-      const body = { title: title.trim() || "제목 없음", content, parentId };
+      const body = { title: title.trim() || t("editor.untitled"), content, parentId };
       await saveDraft(space.id, page.id, body);
-      await publishPage(space.id, page.id, body, user?.email ?? "알 수 없음");
+      await publishPage(space.id, page.id, body, user?.email ?? t("editor.unknownAuthor"));
       await refresh();
     } catch (err) {
-      window.alert(`발행에 실패했습니다: ${(err as Error).message}`);
+      window.alert(t("editor.publishFailed", { message: (err as Error).message }));
     } finally {
       setPublishing(false);
     }
@@ -108,7 +110,7 @@ export function EditView({ slug }: { slug: string }) {
   const unpublish = async () => {
     if (!space || !page) return;
     setMenuOpen(false);
-    if (!window.confirm(`"${page.title}"을(를) 공개 사이트에서 내릴까요? 초안은 남습니다.`)) return;
+    if (!window.confirm(t("editor.confirmUnpublish", { title: page.title }))) return;
     await unpublishPage(space.id, page.id);
     await refresh();
   };
@@ -116,7 +118,7 @@ export function EditView({ slug }: { slug: string }) {
   const remove = async () => {
     if (!space || !page) return;
     setMenuOpen(false);
-    if (!window.confirm(`"${page.title}" 문서를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+    if (!window.confirm(t("editor.confirmDelete", { title: page.title }))) return;
     await deletePage(space.id, page.id);
     await refresh();
     router.push(`/s/${space.slug}`);
@@ -125,12 +127,12 @@ export function EditView({ slug }: { slug: string }) {
   const rename = async () => {
     if (!space || !page) return;
     setMenuOpen(false);
-    const next = window.prompt("문서 주소", page.slug);
+    const next = window.prompt(t("editor.addressPrompt"), page.slug);
     if (!next) return;
     const slugified = slugify(next);
     if (slugified === page.slug) return;
     if (pages.some((p) => p.id !== page.id && p.slug === slugified)) {
-      window.alert(`이미 사용 중인 주소입니다: ${slugified}`);
+      window.alert(t("editor.addressTaken", { slug: slugified }));
       return;
     }
     await updatePage(space.id, page.id, { slug: slugified });
@@ -144,10 +146,10 @@ export function EditView({ slug }: { slug: string }) {
     setHistoryOpen(false);
   };
 
-  if (loading) return <Loading />;
-  if (!space || !page) return <EmptyState title="문서를 찾을 수 없습니다" />;
+  if (loading) return <Loading label={t("common.loading")} />;
+  if (!space || !page) return <EmptyState title={t("reader.pageNotFound")} />;
   if (!canEdit) {
-    return <EmptyState title="편집 권한이 없습니다" hint="이 매뉴얼의 편집자만 수정할 수 있습니다." />;
+    return <EmptyState title={t("editor.noPermission")} hint={t("editor.noPermissionHint")} />;
   }
 
   return (
@@ -163,8 +165,8 @@ export function EditView({ slug }: { slug: string }) {
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="문서 제목"
-                aria-label="문서 제목"
+                placeholder={t("editor.docTitle")}
+                aria-label={t("editor.docTitle")}
                 className="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none"
               />
               <span
@@ -176,13 +178,17 @@ export function EditView({ slug }: { slug: string }) {
                     : "bg-surface text-muted"
                 }`}
               >
-                {page.published ? (unpublishedChanges ? "발행 대기 중" : "발행됨") : "초안"}
+                {page.published
+                  ? unpublishedChanges
+                    ? t("editor.badgePending")
+                    : t("editor.badgePublished")
+                  : t("editor.badgeDraft")}
               </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 py-2">
               <label className="text-xs text-muted" htmlFor="parent-select">
-                위치
+                {t("editor.location")}
               </label>
               <select
                 id="parent-select"
@@ -190,12 +196,12 @@ export function EditView({ slug }: { slug: string }) {
                 onChange={(e) => setParentId(e.target.value || null)}
                 className="rounded-md border border-input bg-background px-2 py-1 text-sm"
               >
-                <option value="">최상위</option>
+                <option value="">{t("editor.topLevel")}</option>
                 {pages
                   .filter((p) => p.id !== page.id)
                   .map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.title} 하위
+                      {t("editor.childOf", { title: p.title })}
                     </option>
                   ))}
               </select>
@@ -206,20 +212,20 @@ export function EditView({ slug }: { slug: string }) {
                   disabled={publishing || (!unpublishedChanges && !dirty)}
                   className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
                 >
-                  {publishing ? "발행 중…" : "발행"}
+                  {publishing ? t("editor.publishing") : t("editor.publish")}
                 </button>
 
                 <button
                   onClick={() => router.push(`/s/${space.slug}/${page.slug}`)}
                   className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface"
                 >
-                  읽기로 보기
+                  {t("editor.viewAsReader")}
                 </button>
 
                 <div className="relative">
                   <button
                     onClick={() => setMenuOpen((v) => !v)}
-                    aria-label="문서 설정"
+                    aria-label={t("editor.docSettings")}
                     aria-expanded={menuOpen}
                     className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-surface"
                   >
@@ -229,7 +235,7 @@ export function EditView({ slug }: { slug: string }) {
                   {menuOpen && (
                     <>
                       <button
-                        aria-label="메뉴 닫기"
+                        aria-label={t("common.close")}
                         onClick={() => setMenuOpen(false)}
                         className="fixed inset-0 z-40 cursor-default"
                       />
@@ -241,27 +247,27 @@ export function EditView({ slug }: { slug: string }) {
                           }}
                           className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface"
                         >
-                          발행 이력
+                          {t("editor.history")}
                         </button>
                         <button
                           onClick={rename}
                           className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface"
                         >
-                          주소 변경
+                          {t("editor.changeAddress")}
                         </button>
                         {page.published && (
                           <button
                             onClick={unpublish}
                             className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface"
                           >
-                            발행 취소
+                            {t("editor.unpublish")}
                           </button>
                         )}
                         <button
                           onClick={remove}
                           className="block w-full px-3 py-2.5 text-left text-sm text-red-500 hover:bg-surface"
                         >
-                          문서 삭제
+                          {t("editor.deleteDoc")}
                         </button>
                       </div>
                     </>

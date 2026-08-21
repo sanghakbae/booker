@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CloseIcon, MenuIcon } from "./Icons";
+import { useT } from "./LocaleProvider";
 import { SidebarContent } from "./SidebarContent";
 import { useSpace } from "./SpaceProvider";
 
@@ -11,6 +12,7 @@ import { useSpace } from "./SpaceProvider";
  */
 export function MobileNav({ currentTitle }: { currentTitle?: string }) {
   const { space } = useSpace();
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   // A drawer over a scrolled page should not scroll the page behind it.
@@ -34,11 +36,14 @@ export function MobileNav({ currentTitle }: { currentTitle?: string }) {
 
   return (
     <>
-      <div className="sticky top-14 z-30 flex h-12 items-center gap-2 border-b border-border bg-background/90 px-2 backdrop-blur md:hidden">
+      <div
+        data-screen-only
+        className="sticky top-14 z-30 flex h-12 items-center gap-2 border-b border-border bg-background/90 px-2 backdrop-blur md:hidden"
+      >
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="문서 목록 열기"
+          aria-label={t("sidebar.openDocList")}
           aria-expanded={open}
           className="flex h-11 w-11 items-center justify-center rounded-md hover:bg-surface"
         >
@@ -54,20 +59,20 @@ export function MobileNav({ currentTitle }: { currentTitle?: string }) {
         <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
-            aria-label="닫기"
+            aria-label={t("common.close")}
             onClick={() => setOpen(false)}
             className="absolute inset-0 bg-black/40"
           />
           <nav
-            aria-label="문서 목록"
+            aria-label={t("sidebar.docList")}
             className="absolute inset-y-0 left-0 flex w-[85%] max-w-sm flex-col border-r border-border bg-background"
           >
             <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-3">
-              <span className="text-sm font-semibold">문서 목록</span>
+              <span className="text-sm font-semibold">{t("sidebar.docList")}</span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="문서 목록 닫기"
+                aria-label={t("sidebar.closeDocList")}
                 className="flex h-11 w-11 items-center justify-center rounded-md hover:bg-surface"
               >
                 <CloseIcon />

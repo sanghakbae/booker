@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { EditView } from "./EditView";
 import { Loading } from "./Loading";
+import { useT } from "./LocaleProvider";
 import { NewDoc } from "./NewDoc";
 import { Reader } from "./Reader";
 import { SpaceIndex } from "./SpaceIndex";
@@ -45,6 +46,7 @@ function parse(pathname: string): Route {
  * screens client-side, so a new document is reachable before a rebuild.
  */
 export function ClientFallback() {
+  const t = useT();
   // 404.html is prerendered with no URL of its own; the route is only knowable
   // in the browser, so the server snapshot is null and the client reads location.
   const route = useSyncExternalStore(
@@ -53,15 +55,15 @@ export function ClientFallback() {
     () => null
   );
 
-  if (!route) return <Loading />;
+  if (!route) return <Loading label={t("common.loading")} />;
 
   if (route.kind === "unknown") {
     return (
       <main className="mx-auto w-full max-w-md px-4 py-24 text-center">
-        <h1 className="text-2xl font-bold">페이지를 찾을 수 없습니다</h1>
-        <p className="mt-3 text-muted">주소를 다시 확인해 주세요.</p>
+        <h1 className="text-2xl font-bold">{t("notFound.title")}</h1>
+        <p className="mt-3 text-muted">{t("notFound.body")}</p>
         <Link href="/" className="mt-6 inline-block text-accent">
-          홈으로
+          {t("notFound.home")}
         </Link>
       </main>
     );

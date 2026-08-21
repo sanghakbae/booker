@@ -34,6 +34,7 @@ import {
   TableIcon,
   TaskListIcon,
 } from "./Icons";
+import { useT } from "./LocaleProvider";
 import { Tooltip } from "./Tooltip";
 
 type View = "write" | "split" | "preview";
@@ -71,6 +72,7 @@ export function MarkdownEditor({
   dirty: boolean;
   spaceId: string;
 }) {
+  const t = useT();
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const [view, setView] = useState<View>("split");
   const wide = useIsWide();
@@ -104,9 +106,9 @@ export function MarkdownEditor({
   );
 
   const promptLink = useCallback(() => {
-    const url = window.prompt("링크 주소를 입력하세요", "https://");
+    const url = window.prompt(t("editor.linkPrompt"), "https://");
     if (url) apply((input) => insertLink(input, url));
-  }, [apply]);
+  }, [apply, t]);
 
   const upload = useCallback(
     async (files: FileList | File[]) => {
@@ -121,12 +123,12 @@ export function MarkdownEditor({
           apply((input) => insertBlock(input, `![${alt}](${url})`));
         }
       } catch (err) {
-        window.alert(`이미지 업로드에 실패했습니다: ${(err as Error).message}`);
+        window.alert(t("editor.uploadFailed", { message: (err as Error).message }));
       } finally {
         setUploading(false);
       }
     },
-    [apply, spaceId]
+    [apply, spaceId, t]
   );
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -198,30 +200,30 @@ export function MarkdownEditor({
 
   const groups: Tool[][] = [
     [
-      { icon: <span className="text-[13px] font-semibold">H1</span>, label: "제목 1", run: () => apply((i) => setHeading(i, 1)) },
-      { icon: <span className="text-[13px] font-semibold">H2</span>, label: "제목 2", run: () => apply((i) => setHeading(i, 2)) },
-      { icon: <span className="text-[13px] font-semibold">H3</span>, label: "제목 3", run: () => apply((i) => setHeading(i, 3)) },
+      { icon: <span className="text-[13px] font-semibold">H1</span>, label: t("editor.h1"), run: () => apply((i) => setHeading(i, 1)) },
+      { icon: <span className="text-[13px] font-semibold">H2</span>, label: t("editor.h2"), run: () => apply((i) => setHeading(i, 2)) },
+      { icon: <span className="text-[13px] font-semibold">H3</span>, label: t("editor.h3"), run: () => apply((i) => setHeading(i, 3)) },
     ],
     [
-      { icon: <BoldIcon />, label: "굵게", shortcut: `${mod}B`, run: () => apply((i) => toggleWrap(i, "**")) },
-      { icon: <ItalicIcon />, label: "기울임", shortcut: `${mod}I`, run: () => apply((i) => toggleWrap(i, "_")) },
-      { icon: <StrikeIcon />, label: "취소선", run: () => apply((i) => toggleWrap(i, "~~")) },
-      { icon: <CodeIcon />, label: "인라인 코드", run: () => apply((i) => toggleWrap(i, "`")) },
+      { icon: <BoldIcon />, label: t("editor.bold"), shortcut: `${mod}B`, run: () => apply((i) => toggleWrap(i, "**")) },
+      { icon: <ItalicIcon />, label: t("editor.italic"), shortcut: `${mod}I`, run: () => apply((i) => toggleWrap(i, "_")) },
+      { icon: <StrikeIcon />, label: t("editor.strike"), run: () => apply((i) => toggleWrap(i, "~~")) },
+      { icon: <CodeIcon />, label: t("editor.inlineCode"), run: () => apply((i) => toggleWrap(i, "`")) },
     ],
     [
-      { icon: <BulletListIcon />, label: "글머리 목록", run: () => apply((i) => togglePrefix(i, "- ")) },
-      { icon: <OrderedListIcon />, label: "번호 목록", run: () => apply(toggleOrderedList) },
-      { icon: <TaskListIcon />, label: "체크리스트", run: () => apply((i) => togglePrefix(i, "- [ ] ")) },
-      { icon: <QuoteIcon />, label: "인용", run: () => apply((i) => togglePrefix(i, "> ")) },
+      { icon: <BulletListIcon />, label: t("editor.bulletList"), run: () => apply((i) => togglePrefix(i, "- ")) },
+      { icon: <OrderedListIcon />, label: t("editor.orderedList"), run: () => apply(toggleOrderedList) },
+      { icon: <TaskListIcon />, label: t("editor.taskList"), run: () => apply((i) => togglePrefix(i, "- [ ] ")) },
+      { icon: <QuoteIcon />, label: t("editor.quote"), run: () => apply((i) => togglePrefix(i, "> ")) },
     ],
     [
-      { icon: <LinkIcon />, label: "링크", shortcut: `${mod}K`, run: promptLink },
-      { icon: <CodeBlockIcon />, label: "코드 블록", run: () => apply((i) => insertBlock(i, "```\n\n```")) },
-      { icon: <TableIcon />, label: "표 삽입", run: () => apply((i) => insertBlock(i, makeTable(2, 3))) },
-      { icon: <DividerIcon />, label: "구분선", run: () => apply((i) => insertBlock(i, "---")) },
+      { icon: <LinkIcon />, label: t("editor.linkLabel"), shortcut: `${mod}K`, run: promptLink },
+      { icon: <CodeBlockIcon />, label: t("editor.codeBlock"), run: () => apply((i) => insertBlock(i, "```\n\n```")) },
+      { icon: <TableIcon />, label: t("editor.table"), run: () => apply((i) => insertBlock(i, makeTable(2, 3))) },
+      { icon: <DividerIcon />, label: t("editor.divider"), run: () => apply((i) => insertBlock(i, "---")) },
       {
         icon: <CalloutIcon />,
-        label: "안내 상자",
+        label: t("editor.callout"),
         run: () => apply((i) => insertBlock(i, "> **참고**\n>\n> 내용을 작성하세요.")),
       },
     ],
@@ -259,7 +261,7 @@ export function MarkdownEditor({
 
         <span className="mx-1.5 h-5 w-px bg-border" aria-hidden />
 
-        <Tooltip label="이미지 올리기" shortcut="붙여넣기·드래그">
+        <Tooltip label={t("editor.uploadImage")} shortcut={t("editor.uploadHint")}>
           <label className="flex h-8 w-8 cursor-pointer items-center justify-center rounded text-foreground/80 hover:bg-background hover:text-foreground">
             {uploading ? (
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -271,14 +273,14 @@ export function MarkdownEditor({
               accept="image/*"
               multiple
               hidden
-              aria-label="이미지 올리기"
+              aria-label={t("editor.uploadImage")}
               onChange={(e) => e.target.files && upload(e.target.files)}
             />
           </label>
         </Tooltip>
 
         <div className="ml-auto flex items-center gap-1">
-          <div className="flex rounded-md border border-border p-0.5" role="group" aria-label="보기 방식">
+          <div className="flex rounded-md border border-border p-0.5" role="group" aria-label={t("editor.viewMode")}>
             {(["write", "split", "preview"] as View[]).map((v) => (
               <button
                 key={v}
@@ -290,15 +292,19 @@ export function MarkdownEditor({
                   effectiveView === v ? "bg-accent text-accent-foreground" : "hover:bg-background"
                 }`}
               >
-                {v === "write" ? "편집" : v === "split" ? "분할" : "미리보기"}
+                {v === "write"
+                  ? t("editor.viewWrite")
+                  : v === "split"
+                    ? t("editor.viewSplit")
+                    : t("editor.viewPreview")}
               </button>
             ))}
           </div>
 
-          <Tooltip label={fullscreen ? "전체 화면 끄기" : "전체 화면"}>
+          <Tooltip label={fullscreen ? t("editor.exitFullscreen") : t("editor.fullscreen")}>
             <button
               type="button"
-              aria-label={fullscreen ? "전체 화면 끄기" : "전체 화면"}
+              aria-label={fullscreen ? t("editor.exitFullscreen") : t("editor.fullscreen")}
               onClick={() => setFullscreen((f) => !f)}
               className="flex h-8 w-8 items-center justify-center rounded text-foreground/80 hover:bg-background hover:text-foreground"
             >
@@ -312,7 +318,7 @@ export function MarkdownEditor({
             disabled={saving || !dirty}
             className="ml-1 h-8 rounded bg-accent px-3 text-xs font-medium text-accent-foreground disabled:opacity-40"
           >
-            {saving ? "저장 중…" : dirty ? `저장 ${mod}S` : "저장됨"}
+            {saving ? t("common.saving") : dirty ? `${t("common.save")} ${mod}S` : t("common.saved")}
           </button>
         </div>
       </div>
@@ -337,7 +343,7 @@ export function MarkdownEditor({
                 }
               }}
               spellCheck={false}
-              placeholder="마크다운으로 작성하세요. 이미지는 붙여넣거나 끌어다 놓으면 업로드됩니다."
+              placeholder={t("editor.placeholder")}
               // Capped at the reading measure: a full-width line in the editor
               // does not match what the published page will look like.
               style={{ maxWidth: "var(--content-wide)" }}
@@ -355,10 +361,10 @@ export function MarkdownEditor({
       </div>
 
       <div className="flex items-center gap-4 border-t border-border bg-surface px-4 py-1.5 text-xs text-muted">
-        <span>{counts.words.toLocaleString()} 단어</span>
-        <span>{counts.chars.toLocaleString()} 자</span>
-        <span>읽는 데 약 {counts.minutes}분</span>
-        <span className="ml-auto">{dirty ? "저장되지 않은 변경사항" : "모든 변경사항 저장됨"}</span>
+        <span>{t("editor.words", { n: counts.words.toLocaleString() })}</span>
+        <span>{t("editor.chars", { n: counts.chars.toLocaleString() })}</span>
+        <span>{t("editor.readingTime", { n: counts.minutes })}</span>
+        <span className="ml-auto">{dirty ? t("editor.unsaved") : t("editor.allSaved")}</span>
       </div>
     </div>
   );

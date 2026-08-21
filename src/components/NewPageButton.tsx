@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createPage, slugify } from "@/lib/db";
+import { useT } from "./LocaleProvider";
 import { useSpace } from "./SpaceProvider";
 
 /** Creates a document straight from the sidebar — type a title, press Enter. */
 export function NewPageButton() {
   const { space, pages, refresh } = useSpace();
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -45,7 +47,7 @@ export function NewPageButton() {
         onClick={() => setOpen(true)}
         className="mt-4 block w-full rounded-md px-3 py-1.5 text-left text-sm text-muted hover:bg-surface hover:text-foreground"
       >
-        + 새 문서
+        {t("sidebar.newDoc")}
       </button>
     );
   }
@@ -58,7 +60,7 @@ export function NewPageButton() {
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
         onBlur={() => !title.trim() && setOpen(false)}
-        placeholder="문서 제목"
+        placeholder={t("sidebar.docTitlePlaceholder")}
         disabled={busy}
         className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
       />

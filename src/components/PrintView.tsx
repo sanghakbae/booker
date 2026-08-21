@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { flattenTree } from "@/lib/db";
 import { EmptyState, Loading } from "./Loading";
+import { useLocale } from "./LocaleProvider";
 import { Markdown } from "./Markdown";
 import { useSpace } from "./SpaceProvider";
 
@@ -13,6 +14,7 @@ import { useSpace } from "./SpaceProvider";
  */
 export function PrintView() {
   const { space, tree, loading } = useSpace();
+  const { locale, t } = useLocale();
   const documents = useMemo(() => flattenTree(tree), [tree]);
 
   // Give the content a moment to render before the print dialog measures it.
@@ -22,27 +24,27 @@ export function PrintView() {
     return () => clearTimeout(timer);
   }, [loading, space, documents.length]);
 
-  if (loading) return <Loading />;
-  if (!space) return <EmptyState title="매뉴얼을 찾을 수 없습니다" />;
+  if (loading) return <Loading label={t("common.loading")} />;
+  if (!space) return <EmptyState title={t("reader.spaceNotFound")} />;
 
   return (
     <main className="mx-auto w-full px-6 py-10 print:px-0 print:py-0" style={{ maxWidth: "var(--content-wide)" }}>
       <div className="mb-10 flex items-center justify-between gap-4 print:hidden">
         <p className="text-sm text-muted">
-          인쇄 창이 열립니다. 대상에서 &ldquo;PDF로 저장&rdquo;을 선택하세요.
+          {t("print.notice")}
         </p>
         <div className="flex gap-2">
           <button
             onClick={() => window.print()}
             className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground"
           >
-            다시 인쇄
+            {t("print.again")}
           </button>
           <Link
             href={`/s/${space.slug}`}
             className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface"
           >
-            돌아가기
+            {t("print.back")}
           </Link>
         </div>
       </div>
@@ -51,16 +53,17 @@ export function PrintView() {
         <h1 className="text-4xl font-bold">{space.title}</h1>
         {space.description && <p className="mt-3 text-muted">{space.description}</p>}
         <p className="mt-4 text-sm text-muted">
-          booker.sanghak.kr/s/{space.slug} · {new Date().toLocaleDateString("ko-KR")} 기준
+          booker.sanghak.kr/s/{space.slug} ·{" "}
+          {t("print.asOf", { date: new Date().toLocaleDateString(locale) })}
         </p>
       </header>
 
       {documents.length === 0 ? (
-        <EmptyState title="발행된 문서가 없습니다" />
+        <EmptyState title={t("print.noDocs")} />
       ) : (
         <>
           <nav className="mb-12 print:break-after-page">
-            <h2 className="mb-3 text-lg font-semibold">목차</h2>
+            <h2 className="mb-3 text-lg font-semibold">{t("print.toc")}</h2>
             <ol className="space-y-1 text-sm">
               {documents.map((doc, i) => (
                 <li key={doc.id}>

@@ -1,11 +1,11 @@
 /** One loading treatment for every screen, instead of ad-hoc "불러오는 중…" text. */
-export function Loading({ label = "불러오는 중" }: { label?: string }) {
+export function Loading({ label }: { label?: string }) {
   return (
     <div
       style={{ maxWidth: "var(--content-width)" }}
       className="w-full animate-pulse px-4 py-10"
       role="status"
-      aria-label={label}
+      aria-label={label ?? "loading"}
     >
       <div className="h-8 w-1/2 rounded bg-surface" />
       <div className="mt-6 space-y-3">
@@ -13,7 +13,7 @@ export function Loading({ label = "불러오는 중" }: { label?: string }) {
         <div className="h-4 w-11/12 rounded bg-surface" />
         <div className="h-4 w-4/5 rounded bg-surface" />
       </div>
-      <span className="sr-only">{label}…</span>
+      <span className="sr-only">{label ?? "loading"}…</span>
     </div>
   );
 }

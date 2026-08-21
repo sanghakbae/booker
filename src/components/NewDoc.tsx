@@ -4,11 +4,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSpace } from "@/components/SpaceProvider";
 import { EmptyState, Loading } from "./Loading";
+import { useT } from "./LocaleProvider";
 import { createPage, slugify } from "@/lib/db";
 
 export function NewDoc() {
   const { space, pages, loading, canEdit, refresh } = useSpace();
   const router = useRouter();
+  const t = useT();
   const [title, setTitle] = useState("");
   const [parentId, setParentId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -30,16 +32,16 @@ export function NewDoc() {
     }
   };
 
-  if (loading) return <Loading />;
-  if (!space) return <EmptyState title="매뉴얼을 찾을 수 없습니다" />;
-  if (!canEdit) return <EmptyState title="편집 권한이 없습니다" />;
+  if (loading) return <Loading label={t("common.loading")} />;
+  if (!space) return <EmptyState title={t("reader.spaceNotFound")} />;
+  if (!canEdit) return <EmptyState title={t("editor.noPermission")} />;
 
   return (
     <main className="mx-auto w-full max-w-lg px-4 py-16">
-      <h1 className="text-2xl font-bold">새 문서</h1>
+      <h1 className="text-2xl font-bold">{t("newDoc.title")}</h1>
       <form onSubmit={submit} className="mt-8 space-y-6">
         <div>
-          <label className="mb-1.5 block text-sm font-medium">제목</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("newDoc.docTitle")}</label>
           <input
             required
             autoFocus
@@ -48,21 +50,21 @@ export function NewDoc() {
             className="w-full rounded-md border border-input bg-background px-3 py-2"
           />
           <p className="mt-1 text-xs text-muted">
-            /s/{space.slug}/{slugify(title || "주소")}
+            /s/{space.slug}/{slugify(title || t("newDoc.addressPreview"))}
           </p>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium">위치</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("newDoc.location")}</label>
           <select
             value={parentId ?? ""}
             onChange={(e) => setParentId(e.target.value || null)}
             className="w-full rounded-md border border-input bg-background px-3 py-2"
           >
-            <option value="">최상위</option>
+            <option value="">{t("editor.topLevel")}</option>
             {pages.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.title} 하위
+                {t("editor.childOf", { title: p.title })}
               </option>
             ))}
           </select>
@@ -75,7 +77,7 @@ export function NewDoc() {
           disabled={busy || !title.trim()}
           className="rounded-md bg-accent px-4 py-2 font-medium text-accent-foreground disabled:opacity-40"
         >
-          {busy ? "만드는 중…" : "만들기"}
+          {busy ? t("common.creating") : t("common.create")}
         </button>
       </form>
     </main>

@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { TocItem } from "@/lib/toc";
+import { useT } from "./LocaleProvider";
 
 /** Right-hand "On this page" rail, with the visible heading highlighted. */
 export function Toc({ items }: { items: TocItem[] }) {
+  const t = useT();
   const [active, setActive] = useState<string>("");
 
   useEffect(() => {
@@ -33,10 +35,10 @@ export function Toc({ items }: { items: TocItem[] }) {
     <aside
       style={{ width: "var(--toc-width)" }}
       className="hidden shrink-0 rail:block"
-      aria-label="목차"
+      aria-label={t("toc.label")}
     >
       <div className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto py-6 pr-4">
-        <p className="pb-2 text-xs font-semibold tracking-wide text-muted">이 페이지의 내용</p>
+        <p className="pb-2 text-xs font-semibold tracking-wide text-muted">{t("toc.title")}</p>
         <ul className="space-y-1 border-l border-border">
           {items.map((item) => (
             <li key={item.id}>

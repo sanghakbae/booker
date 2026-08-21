@@ -5,12 +5,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { Loading } from "@/components/Loading";
+import { useT } from "@/components/LocaleProvider";
 import { isAdmin } from "@/lib/admin";
 import { listAllSpaces, listOwnedSpaces, listSharedSpaces, updateSpace } from "@/lib/db";
 import type { Space } from "@/lib/types";
 
 export default function ManualsPage() {
   const { user, loading, signIn } = useAuth();
+  const t = useT();
   const [mine, setMine] = useState<Space[] | null>(null);
   const [shared, setShared] = useState<Space[]>([]);
   const [all, setAll] = useState<Space[]>([]);
@@ -43,18 +45,18 @@ export default function ManualsPage() {
     void load();
   }, [user, load]);
 
-  if (loading) return <Loading />;
+  if (loading) return <Loading label={t("common.loading")} />;
 
   if (!user) {
     return (
       <main className="mx-auto w-full max-w-md px-4 py-24 text-center">
-        <h1 className="text-2xl font-bold">내 매뉴얼</h1>
-        <p className="mt-3 text-muted">매뉴얼을 만들고 관리하려면 로그인이 필요합니다.</p>
+        <h1 className="text-2xl font-bold">{t("manuals.title")}</h1>
+        <p className="mt-3 text-muted">{t("manuals.signInPrompt")}</p>
         <button
           onClick={() => signIn()}
           className="mt-6 rounded-lg bg-accent px-5 py-3 font-medium text-accent-foreground"
         >
-          Google로 로그인
+          {t("common.signIn")}
         </button>
       </main>
     );
@@ -67,30 +69,30 @@ export default function ManualsPage() {
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">내 매뉴얼</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("manuals.title")}</h1>
           <p className="mt-2 text-muted">{user.displayName ?? user.email}</p>
         </div>
         <Link
           href="/new"
           className="rounded-lg bg-accent px-4 py-2.5 font-medium text-accent-foreground"
         >
-          새 매뉴얼
+          {t("manuals.new")}
         </Link>
       </div>
 
       {mine === null ? (
-        <Loading label="매뉴얼을 불러오는 중" />
+        <Loading label={t("manuals.loading")} />
       ) : mine.length === 0 ? (
         <div className="mt-10 rounded-xl border border-border p-10 text-center">
-          <p className="font-medium">아직 만든 매뉴얼이 없습니다</p>
+          <p className="font-medium">{t("manuals.emptyTitle")}</p>
           <p className="mt-2 text-sm text-muted">
-            이름만 정하면 시작할 수 있습니다. 템플릿으로 골격까지 채워집니다.
+            {t("manuals.emptyBody")}
           </p>
           <Link
             href="/new"
             className="mt-6 inline-block rounded-lg bg-accent px-5 py-2.5 font-medium text-accent-foreground"
           >
-            첫 매뉴얼 만들기
+            {t("manuals.emptyCta")}
           </Link>
         </div>
       ) : (
@@ -105,9 +107,9 @@ export default function ManualsPage() {
 
       {shared.length > 0 && (
         <section className="mt-16">
-          <h2 className="flex items-center gap-3 text-[1.75rem] font-semibold tracking-tight text-muted">
-            <span className="h-6 w-1.5 rounded-full bg-accent" aria-hidden />
-            함께 편집하는 매뉴얼
+          <h2 className="flex items-center gap-3 text-xl font-semibold tracking-tight text-muted">
+            <span className="h-5 w-1.5 rounded-full bg-accent" aria-hidden />
+            {t("manuals.shared")}
           </h2>
           <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {shared.map((space) => (
@@ -127,13 +129,12 @@ export default function ManualsPage() {
 
       {operator && (
         <section className="mt-16">
-          <h2 className="flex items-center gap-3 text-[1.75rem] font-semibold tracking-tight text-muted">
-            <span className="h-6 w-1.5 rounded-full bg-accent" aria-hidden />
-            사이트 전체 매뉴얼
+          <h2 className="flex items-center gap-3 text-xl font-semibold tracking-tight text-muted">
+            <span className="h-5 w-1.5 rounded-full bg-accent" aria-hidden />
+            {t("manuals.allTitle")}
           </h2>
           <p className="mt-2 text-sm text-muted">
-            운영자 계정에만 보입니다. 열람만 가능하고, 다른 사람의 매뉴얼을 편집하거나 삭제할 수는
-            없습니다.
+            {t("manuals.allNote")}
           </p>
 
           <ul className="mt-5 divide-y divide-border rounded-xl border border-border">
@@ -150,31 +151,31 @@ export default function ManualsPage() {
                       : "bg-surface text-muted"
                   }`}
                 >
-                  {space.visibility === "public" ? "공개" : "비공개"}
+                  {space.visibility === "public" ? t("common.public") : t("common.private")}
                 </span>
                 {space.ownerId === user.uid ? (
-                  <span className="ml-auto text-xs text-muted">내 매뉴얼</span>
+                  <span className="ml-auto text-xs text-muted">{t("manuals.mine")}</span>
                 ) : (
                   <span className="ml-auto font-mono text-xs text-muted">
-                    소유자 {space.ownerId.slice(0, 8)}…
+                    {t("common.owner")} {space.ownerId.slice(0, 8)}…
                   </span>
                 )}
               </li>
             ))}
             {all.length === 0 && (
-              <li className="px-4 py-3 text-sm text-muted">불러올 매뉴얼이 없습니다.</li>
+              <li className="px-4 py-3 text-sm text-muted">{t("manuals.allEmpty")}</li>
             )}
           </ul>
         </section>
       )}
 
       <section className="mt-16">
-        <h2 className="flex items-center gap-3 text-[1.75rem] font-semibold tracking-tight text-muted">
-          <span className="h-6 w-1.5 rounded-full bg-accent" aria-hidden />
-          공개된 매뉴얼 검색
+        <h2 className="flex items-center gap-3 text-xl font-semibold tracking-tight text-muted">
+          <span className="h-5 w-1.5 rounded-full bg-accent" aria-hidden />
+          {t("manuals.searchTitle")}
         </h2>
         <p className="mt-2 text-sm text-muted">
-          공개로 발행된 문서를 대상으로 찾습니다. 비공개 매뉴얼은 검색되지 않습니다.
+          {t("manuals.searchNote")}
         </p>
         <div className="mt-4">
           <GlobalSearch />
@@ -186,6 +187,7 @@ export default function ManualsPage() {
 
 /** One owned manual, with the publish switch the owner reaches for most. */
 function ManualCard({ space, onChanged }: { space: Space; onChanged: () => Promise<void> }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const isPublic = space.visibility === "public";
 
@@ -195,7 +197,7 @@ function ManualCard({ space, onChanged }: { space: Space; onChanged: () => Promi
       await updateSpace(space.id, { visibility: isPublic ? "private" : "public" });
       await onChanged();
     } catch (err) {
-      window.alert(`변경에 실패했습니다: ${(err as Error).message}`);
+      window.alert(t("manuals.changeFailed", { message: (err as Error).message }));
     } finally {
       setBusy(false);
     }
@@ -217,7 +219,7 @@ function ManualCard({ space, onChanged }: { space: Space; onChanged: () => Promi
             isPublic ? "bg-success/12 text-success" : "bg-surface text-muted"
           }`}
         >
-          {isPublic ? "공개" : "비공개"}
+          {isPublic ? t("common.public") : t("common.private")}
         </span>
 
         <div className="flex items-center gap-3">
@@ -226,13 +228,13 @@ function ManualCard({ space, onChanged }: { space: Space; onChanged: () => Promi
             disabled={busy}
             className="text-sm text-muted hover:text-foreground disabled:opacity-40"
           >
-            {busy ? "변경 중…" : isPublic ? "비공개로" : "공개로"}
+            {busy ? t("manuals.changing") : isPublic ? t("manuals.makePrivate") : t("manuals.makePublic")}
           </button>
           <Link
             href={`/s/${space.slug}/settings`}
             className="text-sm text-muted hover:text-foreground"
           >
-            설정
+            {t("manuals.settings")}
           </Link>
         </div>
       </div>

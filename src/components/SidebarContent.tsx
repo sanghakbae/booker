@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { searchPages } from "@/lib/search";
 import type { PageNode } from "@/lib/types";
 import { SearchIcon } from "./Icons";
+import { useT } from "./LocaleProvider";
 import { NewPageButton } from "./NewPageButton";
 import { ShareLink } from "./ShareLink";
 import { useSpace } from "./SpaceProvider";
@@ -16,7 +17,9 @@ function NavItem({
   depth,
   current,
   onNavigate,
+  draftLabel,
 }: {
+  draftLabel: string;
   node: PageNode;
   spaceSlug: string;
   depth: number;
@@ -42,7 +45,7 @@ function NavItem({
           <span className="min-w-0 flex-1">{node.title}</span>
           {!node.published && (
             <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[11px] text-muted">
-              초안
+              {draftLabel}
             </span>
           )}
         </span>
@@ -57,6 +60,7 @@ function NavItem({
               depth={depth + 1}
               current={current}
               onNavigate={onNavigate}
+              draftLabel={draftLabel}
             />
           ))}
         </ul>
@@ -68,6 +72,7 @@ function NavItem({
 /** The navigation body, shared by the desktop rail and the mobile drawer. */
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { space, pages, tree, canEdit } = useSpace();
+  const t = useT();
   const pathname = usePathname();
   const [query, setQuery] = useState("");
 
@@ -92,15 +97,15 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="문서 검색"
-          aria-label="문서 검색"
+          placeholder={t("sidebar.searchPlaceholder")}
+          aria-label={t("sidebar.searchPlaceholder")}
           className="w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm"
         />
       </div>
 
       {query.trim() ? (
         hits.length === 0 ? (
-          <p className="px-3 py-2 text-sm text-muted">검색 결과가 없습니다.</p>
+          <p className="px-3 py-2 text-sm text-muted">{t("sidebar.noResults")}</p>
         ) : (
           <ul className="space-y-1">
             {hits.map(({ page, snippet }) => (
@@ -118,7 +123,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </ul>
         )
       ) : tree.length === 0 ? (
-        <p className="px-3 text-sm text-muted">아직 문서가 없습니다.</p>
+        <p className="px-3 text-sm text-muted">{t("sidebar.noDocs")}</p>
       ) : (
         <ul className="space-y-0.5">
           {tree.map((node) => (
@@ -129,6 +134,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               depth={0}
               current={current}
               onNavigate={onNavigate}
+              draftLabel={t("sidebar.draft")}
             />
           ))}
         </ul>
@@ -142,7 +148,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           onClick={onNavigate}
           className="block rounded-md px-3 py-2 text-sm text-muted hover:bg-surface hover:text-foreground"
         >
-          인쇄 · PDF로 저장
+          {t("sidebar.print")}
         </Link>
         {canEdit && (
           <Link
@@ -150,7 +156,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             className="block rounded-md px-3 py-2 text-sm text-muted hover:bg-surface hover:text-foreground"
           >
-            매뉴얼 설정
+            {t("sidebar.manualSettings")}
           </Link>
         )}
       </div>
