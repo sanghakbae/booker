@@ -35,14 +35,14 @@ export function PageFeedback({
 
   if (sent) {
     return (
-      <div className="doc-aligned mt-12 rounded-lg bg-surface p-5">
+      <div data-screen-only className="doc-aligned mt-12 rounded-lg bg-surface p-5">
         <p className="text-sm">{t("feedback.thanks")}</p>
       </div>
     );
   }
 
   return (
-    <div className="doc-aligned mt-12 rounded-lg bg-surface p-5">
+    <div data-screen-only className="doc-aligned mt-12 rounded-lg bg-surface p-5">
       <p className="text-sm font-medium">{t("feedback.question")}</p>
 
       <div className="mt-3 flex gap-2">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { EditView } from "./EditView";
 import { Loading } from "./Loading";
+import { ManualFooter, ManualHeader } from "./ManualHeader";
 import { useT } from "./LocaleProvider";
 import { NewDoc } from "./NewDoc";
 import { Reader } from "./Reader";
@@ -71,10 +72,16 @@ export function ClientFallback() {
 
   return (
     <SpaceProvider slug={route.space}>
+      {/* 404.html is prerendered for /404, so the chrome baked into it belongs
+          to the product, not to a manual. Once hydrated at the real URL the
+          product chrome switches itself off, which left these pages with no
+          header at all — the manual's own has to be rendered here too. */}
+      <ManualHeader />
       {route.kind === "space" && <SpaceIndex />}
       {route.kind === "new" && <NewDoc />}
       {route.kind === "page" && <Reader slug={route.page} />}
       {route.kind === "edit" && <EditView slug={route.page} />}
+      <ManualFooter />
     </SpaceProvider>
   );
 }

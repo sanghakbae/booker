@@ -43,7 +43,7 @@ export function SpaceSettings() {
 
   return (
     <>
-      <MobileNav currentTitle="설정" />
+      <MobileNav currentTitle={t("manuals.settings")} />
 
       <div
         style={{ maxWidth: "var(--container-width)" }}
