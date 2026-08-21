@@ -78,6 +78,15 @@ export async function listOwnedSpaces(ownerId: string): Promise<Space[]> {
   return snap.docs.map(toSpace);
 }
 
+/**
+ * Every manual, public and private. Only the operator account can run this —
+ * the rules reject an unfiltered listing for anyone else.
+ */
+export async function listAllSpaces(): Promise<Space[]> {
+  const snap = await getDocs(query(spacesRef, orderBy("title")));
+  return snap.docs.map(toSpace);
+}
+
 /** Manuals shared with this account, found by the invited email. */
 export async function listSharedSpaces(email: string): Promise<Space[]> {
   const snap = await getDocs(query(spacesRef, where("editorEmails", "array-contains", email)));

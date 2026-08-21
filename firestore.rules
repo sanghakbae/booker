@@ -7,6 +7,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    /**
+     * The site operator. Read-only on purpose: the point is oversight of what
+     * has been published here, not the ability to edit someone else's manual.
+     * Because this does not depend on resource.data, it also lets the operator
+     * list every manual without a filter.
+     */
+    function isAdmin() {
+      return isSignedIn()
+             && request.auth.token.email_verified == true
+             && request.auth.token.email == 'totoriverce@gmail.com';
+    }
+
     match /spaces/{spaceId} {
 
       function space() {
@@ -23,7 +35,7 @@ service cloud.firestore {
       }
 
       function canRead(data) {
-        return data.visibility == 'public' || canEdit(data);
+        return data.visibility == 'public' || canEdit(data) || isAdmin();
       }
 
       allow read: if canRead(resource.data);
@@ -51,19 +63,21 @@ service cloud.firestore {
       // `published == true` is rejected unless the caller can edit.
       match /pages/{pageId} {
         allow read: if (space().visibility == 'public' && resource.data.published == true)
-                    || canEdit(space());
+                    || canEdit(space())
+                    || isAdmin();
         allow write: if canEdit(space());
       }
 
       // --- Working copies -----------------------------------------------
       // Never readable by the public; this is where unpublished text lives.
       match /drafts/{pageId} {
-        allow read, write: if canEdit(space());
+        allow read: if canEdit(space()) || isAdmin();
+        allow write: if canEdit(space());
       }
 
       // --- Publish history ----------------------------------------------
       match /versions/{versionId} {
-        allow read: if canEdit(space());
+        allow read: if canEdit(space()) || isAdmin();
         allow create: if canEdit(space());
         allow delete: if canEdit(space());
       }
@@ -76,7 +90,8 @@ service cloud.firestore {
                       && request.resource.data.helpful is bool
                       && request.resource.data.comment is string
                       && request.resource.data.comment.size() <= 1000;
-        allow read, delete: if canEdit(space());
+        allow read: if canEdit(space()) || isAdmin();
+        allow delete: if canEdit(space());
       }
     }
   }

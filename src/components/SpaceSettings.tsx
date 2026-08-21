@@ -51,17 +51,16 @@ export function SpaceSettings() {
         <main className="min-w-0 flex-1 py-10 md:px-10">
           <h1 className="text-2xl font-bold">{space.title} 설정</h1>
 
-          <div
-            className="mt-6 flex gap-1 overflow-x-auto border-b border-border"
-            role="tablist"
-          >
+          {/* Wrapping rather than scrolling: a horizontally scrolled strip just
+              looked like the last tab had been cut off. */}
+          <div className="mt-6 flex flex-wrap gap-x-1 border-b border-border" role="tablist">
             {visible.map((t) => (
               <button
                 key={t.id}
                 role="tab"
                 aria-selected={tab === t.id}
                 onClick={() => setTab(t.id)}
-                className={`shrink-0 border-b-2 px-3 py-2.5 text-sm ${
+                className={`border-b-2 px-3 py-2.5 text-sm ${
                   tab === t.id
                     ? "border-accent font-medium text-accent"
                     : "border-transparent text-muted hover:text-foreground"

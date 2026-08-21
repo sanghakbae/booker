@@ -220,6 +220,39 @@ body {
   text-underline-offset: 2px;
 }
 
+/* Task lists. The browser default checkbox sits off the text baseline and
+   carries none of the palette. */
+.doc input[type="checkbox"] {
+  appearance: none;
+  position: relative;
+  width: 1.05em;
+  height: 1.05em;
+  margin-right: 0.5em;
+  vertical-align: -0.17em;
+  border: 1.5px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--background);
+}
+
+.doc input[type="checkbox"]:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.doc input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: no-repeat center / 0.7em 0.7em
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg>');
+}
+
+/* A checklist item carries its own marker, so drop the bullet. */
+.doc li:has(> input[type="checkbox"]) {
+  list-style: none;
+  margin-left: -1.4rem;
+}
+
 .doc ul,
 .doc ol {
   padding-left: 1.4rem;

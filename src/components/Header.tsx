@@ -22,10 +22,10 @@ export function Header() {
           {loading ? null : user ? (
             <>
               <Link
-                href="/new"
+                href="/manuals"
                 className="flex h-11 items-center px-1 text-muted hover:text-foreground"
               >
-                새 매뉴얼
+                내 매뉴얼
               </Link>
               <span className="hidden text-muted sm:inline">{user.displayName ?? user.email}</span>
               <button
