@@ -41,6 +41,10 @@ export function EditView({ slug }: { slug: string }) {
   const [publishing, setPublishing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  /** Outcome of the last publish, shown until the next attempt. */
+  const [publishNote, setPublishNote] = useState<{ kind: "error" | "warn"; text: string } | null>(
+    null
+  );
   /** Set as soon as the user types, so a later load never overwrites them. */
   const [touched, setTouched] = useState(false);
   const loadedFor = useRef<string | null>(null);
@@ -115,13 +119,39 @@ export function EditView({ slug }: { slug: string }) {
   const publish = async () => {
     if (!space || !page || publishing) return;
     setPublishing(true);
+    setPublishNote(null);
     try {
       const body = { title: title.trim() || t("editor.untitled"), content, parentId };
       await saveDraft(space.id, page.id, body, { published: page.published });
-      await publishPage(space.id, page.id, body, user?.email ?? t("editor.unknownAuthor"));
+      const result = await publishPage(
+        space.id,
+        page.id,
+        body,
+        user?.email ?? t("editor.unknownAuthor")
+      );
       await refresh();
+
+      // Reported in the page rather than a dialog: a publish that changed
+      // nothing on the server used to look identical to one that worked.
+      if (!result.ok) {
+        setPublishNote({
+          kind: "error",
+          text: t("editor.publishMismatch", { detail: result.detail ?? "" }),
+        });
+      } else if (result.historyError) {
+        setPublishNote({
+          kind: "warn",
+          text: t("editor.historyFailed", { message: result.historyError }),
+        });
+      }
     } catch (err) {
-      void dialogs.alert(t("editor.publishFailed", { message: (err as Error).message }));
+      const error = err as { code?: string; message: string };
+      setPublishNote({
+        kind: "error",
+        text: t("editor.publishFailed", {
+          message: error.code ? `${error.code} — ${error.message}` : error.message,
+        }),
+      });
     } finally {
       setPublishing(false);
     }
@@ -234,6 +264,18 @@ export function EditView({ slug }: { slug: string }) {
               </span>
             </div>
 
+            {publishNote && (
+              <p
+                className={`mt-2 rounded-md px-3 py-2 text-sm ${
+                  publishNote.kind === "error"
+                    ? "bg-red-500/10 text-red-600"
+                    : "bg-warning/12 text-warning"
+                }`}
+              >
+                {publishNote.text}
+              </p>
+            )}
+
             <div className="flex flex-wrap items-center gap-2 py-2">
               <label className="text-xs text-muted" htmlFor="parent-select">
                 {t("editor.location")}
@@ -283,17 +325,29 @@ export function EditView({ slug }: { slug: string }) {
                     signal that anything had happened was the draft badge
                     disappearing from the sidebar. */}
                 {unpublishedChanges || dirty ? (
-                  <button
-                    onClick={publish}
-                    disabled={publishing}
-                    className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
-                  >
-                    {publishing
-                      ? t("editor.publishing")
-                      : page.published
-                        ? t("editor.publishChanges")
-                        : t("editor.publishThis")}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={publish}
+                      disabled={publishing}
+                      className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
+                    >
+                      {publishing
+                        ? t("editor.publishing")
+                        : page.published
+                          ? t("editor.publishChanges")
+                          : t("editor.publishThis")}
+                    </button>
+                    {/* Kept visible here so a publish that will not take can be
+                        worked around by unpublishing and publishing again. */}
+                    {page.published && (
+                      <button
+                        onClick={unpublish}
+                        className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface"
+                      >
+                        {t("editor.unpublish")}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className="rounded-md bg-success/12 px-2.5 py-2 text-sm font-medium text-success">

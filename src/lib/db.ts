@@ -309,14 +309,25 @@ export async function saveDraft(
   }
 }
 
-/** Copies the draft into the published document and records a version. */
+/**
+ * Copies the draft into the published document, then reads it back.
+ *
+ * The read-back exists because a publish that quietly failed to change the
+ * server was indistinguishable from one that worked: the button simply went
+ * back to its resting state. Now the caller learns which of the two happened.
+ *
+ * Recording history is deliberately separate and non-fatal — a version that
+ * fails to write must not make a successful publish look broken.
+ */
 export async function publishPage(
   spaceId: string,
   pageId: string,
   draft: { title: string; content: string; parentId: string | null },
   authorEmail: string
-) {
-  await updateDoc(doc(db, "spaces", spaceId, "pages", pageId), {
+): Promise<{ ok: boolean; detail?: string; historyError?: string }> {
+  const ref = doc(db, "spaces", spaceId, "pages", pageId);
+
+  await updateDoc(ref, {
     title: draft.title,
     content: draft.content,
     parentId: draft.parentId,
@@ -324,13 +335,31 @@ export async function publishPage(
     updatedAt: serverTimestamp(),
     publishedAt: serverTimestamp(),
   });
-  await addDoc(versionsRef(spaceId), {
-    pageId,
-    title: draft.title,
-    content: draft.content,
-    authorEmail,
-    publishedAt: serverTimestamp(),
-  });
+
+  const stored = await getDoc(ref);
+  const data = stored.data();
+  const ok =
+    !!data && data.published === true && data.content === draft.content && data.title === draft.title;
+
+  let historyError: string | undefined;
+  try {
+    await addDoc(versionsRef(spaceId), {
+      pageId,
+      title: draft.title,
+      content: draft.content,
+      authorEmail,
+      publishedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    historyError = (err as Error).message;
+  }
+
+  if (ok) return { ok: true, historyError };
+  return {
+    ok: false,
+    historyError,
+    detail: `published=${data?.published} 길이 ${String(data?.content ?? "").length}/${draft.content.length}`,
+  };
 }
 
 /** Takes a document off the public site without deleting the draft. */
