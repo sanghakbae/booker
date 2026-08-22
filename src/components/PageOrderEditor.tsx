@@ -104,7 +104,7 @@ export function PageOrderEditor() {
               </span>
             )}
 
-            <div className="flex shrink-0 items-center">
+            <div className="flex shrink-0 items-center gap-0.5">
               {[
                 { label: t("order.up"), sign: "↑", run: () => apply(nudge(readRows(), index, -1)) },
                 { label: t("order.down"), sign: "↓", run: () => apply(nudge(readRows(), index, 1)) },
@@ -115,7 +115,7 @@ export function PageOrderEditor() {
                   key={action.label}
                   onClick={action.run}
                   aria-label={`${row.title} ${action.label}`}
-                  className="flex h-9 w-9 items-center justify-center rounded text-muted hover:bg-surface hover:text-foreground"
+                  className="flex h-10 w-10 items-center justify-center rounded-md border border-transparent text-lg leading-none text-muted hover:border-border hover:bg-surface hover:text-foreground"
                 >
                   {action.sign}
                 </button>
