@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import {
+  changePageSlug,
   deletePage,
   publishPage,
+  findPageBySlug,
   saveDraft,
   slugify,
   unpublishPage,
-  updatePage,
 } from "@/lib/db";
 import type { Version } from "@/lib/types";
 import { EmptyState, Loading } from "./Loading";
@@ -28,7 +29,7 @@ export function EditView({ slug }: { slug: string }) {
   const router = useRouter();
   const t = useT();
 
-  const page = useMemo(() => pages.find((p) => p.slug === slug), [pages, slug]);
+  const page = useMemo(() => findPageBySlug(pages, slug).page, [pages, slug]);
   const draft = page ? drafts.get(page.id) : undefined;
 
   const [title, setTitle] = useState("");
@@ -159,7 +160,7 @@ export function EditView({ slug }: { slug: string }) {
       return;
     }
     if (!window.confirm(t("editor.confirmMatchAddress", { from: page.slug, to: next }))) return;
-    await updatePage(space.id, page.id, { slug: next });
+    await changePageSlug(space.id, page, next);
     await refresh();
     router.replace(`/s/${space.slug}/${next}/edit`);
   };
@@ -175,7 +176,7 @@ export function EditView({ slug }: { slug: string }) {
       window.alert(t("editor.addressTaken", { slug: slugified }));
       return;
     }
-    await updatePage(space.id, page.id, { slug: slugified });
+    await changePageSlug(space.id, page, slugified);
     await refresh();
     router.replace(`/s/${space.slug}/${slugified}/edit`);
   };

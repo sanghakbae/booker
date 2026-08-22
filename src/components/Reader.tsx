@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { flattenTree } from "@/lib/db";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo } from "react";
+import { findPageBySlug, flattenTree } from "@/lib/db";
 import { extractToc } from "@/lib/toc";
 import { EmptyState, Loading } from "./Loading";
 import { useT } from "./LocaleProvider";
@@ -16,10 +17,19 @@ import { useSpace } from "./SpaceProvider";
 export function Reader({ slug }: { slug: string }) {
   const { space, tree, drafts, loading, canEdit } = useSpace();
   const t = useT();
+  const router = useRouter();
 
   const ordered = useMemo(() => flattenTree(tree), [tree]);
-  const index = ordered.findIndex((p) => p.slug === slug);
+  const resolved = useMemo(() => findPageBySlug(ordered, slug), [ordered, slug]);
+  const index = resolved.page ? ordered.findIndex((p) => p.id === resolved.page!.id) : -1;
   const current = index >= 0 ? ordered[index] : null;
+
+  // An old address still opens the document; the URL then settles on the
+  // current one so what gets copied and indexed is the canonical link.
+  useEffect(() => {
+    if (!space || !resolved.viaAlias || !resolved.page) return;
+    router.replace(`/s/${space.slug}/${resolved.page.slug}`);
+  }, [space, resolved, router]);
   const toc = useMemo(() => extractToc(current?.content ?? ""), [current?.content]);
 
   if (loading) return <Loading label={t("common.loading")} />;

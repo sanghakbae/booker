@@ -41,10 +41,12 @@ function NavItem({
             : "text-foreground/80 hover:bg-surface hover:text-foreground"
         }`}
       >
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-2">
           <span className="min-w-0 flex-1">{node.title}</span>
           {!node.published && (
-            <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[11px] text-muted">
+            /* Bordered and spaced: with only a tint behind it, the badge read
+               as part of the title — "소개초안" rather than "소개" + "초안". */
+            <span className="shrink-0 rounded border border-border bg-surface px-1.5 py-0.5 text-[11px] leading-none text-muted">
               {draftLabel}
             </span>
           )}

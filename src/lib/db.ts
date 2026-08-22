@@ -342,6 +342,29 @@ export async function unpublishPage(spaceId: string, pageId: string) {
   });
 }
 
+/**
+ * Moves a document to a new address, keeping the old one as an alias so links
+ * already shared keep working.
+ */
+export async function changePageSlug(spaceId: string, page: Page, nextSlug: string) {
+  const aliases = Array.from(new Set([...(page.aliases ?? []), page.slug])).filter(
+    (slug) => slug !== nextSlug
+  );
+  await updateDoc(doc(db, "spaces", spaceId, "pages", page.id), {
+    slug: nextSlug,
+    aliases,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Resolves an address to a document, following aliases. */
+export function findPageBySlug(pages: Page[], slug: string) {
+  const exact = pages.find((page) => page.slug === slug);
+  if (exact) return { page: exact, viaAlias: false };
+  const aliased = pages.find((page) => (page.aliases ?? []).includes(slug));
+  return { page: aliased, viaAlias: !!aliased };
+}
+
 export async function updatePage(spaceId: string, pageId: string, patch: Partial<Page>) {
   await updateDoc(doc(db, "spaces", spaceId, "pages", pageId), {
     ...patch,

@@ -27,6 +27,11 @@ export type Page = {
   parentId: string | null;
   order: number;
   published: boolean;
+  /**
+   * Addresses this document used to answer to. Renaming would otherwise break
+   * every link already shared, so the old address is kept and redirected.
+   */
+  aliases?: string[];
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
   publishedAt?: Timestamp;

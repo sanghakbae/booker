@@ -125,6 +125,39 @@ export default function NewSpacePage() {
           </div>
         </div>
 
+        {/* Not tucked behind the details toggle. This is the one choice on the
+            form that cannot be undone quietly — a manual made public by
+            accident is already readable by the time anyone notices. */}
+        <div>
+          <label className="mb-2 block text-sm font-medium">{t("new.visibility")}</label>
+          <div className="space-y-2">
+            {(["private", "public"] as const).map((v) => (
+              <label
+                key={v}
+                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${
+                  visibility === v ? "border-accent bg-accent/5" : "border-border"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="visibility"
+                  className="mt-0.5"
+                  checked={visibility === v}
+                  onChange={() => setVisibility(v)}
+                />
+                <span>
+                  {v === "public" ? t("new.publicLabel") : t("new.privateLabel")}
+                  {v === "public" && (
+                    <span className="mt-1 block text-xs text-warning">
+                      {t("new.publicWarning")}
+                    </span>
+                  )}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div>
           <button
             type="button"
@@ -156,21 +189,6 @@ export default function NewSpacePage() {
                 />
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">{t("new.visibility")}</label>
-                <div className="flex flex-wrap gap-4 text-sm">
-                  {(["public", "private"] as const).map((v) => (
-                    <label key={v} className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        checked={visibility === v}
-                        onChange={() => setVisibility(v)}
-                      />
-                      {v === "public" ? t("new.publicLabel") : t("new.privateLabel")}
-                    </label>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
         </div>
@@ -182,7 +200,11 @@ export default function NewSpacePage() {
           disabled={busy || !title.trim()}
           className="rounded-md bg-accent px-5 py-2.5 font-medium text-accent-foreground disabled:opacity-40"
         >
-          {busy ? t("common.creating") : t("common.create")}
+          {busy
+            ? t("common.creating")
+            : visibility === "public"
+              ? t("new.createPublic")
+              : t("new.createPrivate")}
         </button>
       </form>
     </main>
