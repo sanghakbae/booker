@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  changePageSlug,
   deleteFeedback,
   deleteSpace,
   listFeedback,
@@ -10,6 +11,7 @@ import {
   slugify,
   updateSpace,
 } from "@/lib/db";
+import { hasHangul } from "@/lib/romanize";
 import type { MessageKey } from "@/lib/i18n";
 import type { Feedback } from "@/lib/types";
 import { useAuth } from "./AuthProvider";
@@ -20,11 +22,12 @@ import { PageOrderEditor } from "./PageOrderEditor";
 import { Sidebar } from "./Sidebar";
 import { useSpace } from "./SpaceProvider";
 
-type Tab = "general" | "order" | "editors" | "feedback" | "danger";
+type Tab = "general" | "order" | "addresses" | "editors" | "feedback" | "danger";
 
 const TABS: Array<{ id: Tab; key: MessageKey; ownerOnly?: boolean }> = [
   { id: "general", key: "settings.tabGeneral" },
   { id: "order", key: "settings.tabOrder" },
+  { id: "addresses", key: "settings.tabAddresses" },
   { id: "editors", key: "settings.tabEditors", ownerOnly: true },
   { id: "feedback", key: "settings.tabFeedback" },
   { id: "danger", key: "settings.tabDanger", ownerOnly: true },
@@ -92,6 +95,7 @@ export function SpaceSettings() {
           <div className="py-8" style={{ maxWidth: "var(--content-width)" }}>
             {tab === "general" && <GeneralTab onSaved={refresh} />}
             {tab === "order" && <PageOrderEditor />}
+            {tab === "addresses" && <AddressesTab onSaved={refresh} />}
             {tab === "editors" && <EditorsTab onSaved={refresh} />}
             {tab === "feedback" && <FeedbackTab />}
             {tab === "danger" && (
@@ -212,6 +216,83 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
         {busy ? t("common.saving") : t("common.save")}
       </button>
     </form>
+  );
+}
+
+/**
+ * Moves Korean addresses to romanized ones, so a manual does not end up with
+ * two address styles side by side. Every move keeps the old address as an
+ * alias, so links already shared keep working.
+ */
+function AddressesTab({ onSaved }: { onSaved: () => Promise<void> }) {
+  const { space, pages } = useSpace();
+  const t = useT();
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(0);
+
+  if (!space) return null;
+
+  const stale = pages.filter((page) => hasHangul(page.slug));
+
+  const run = async () => {
+    setBusy(true);
+    try {
+      const taken = new Set(pages.map((page) => page.slug));
+      for (const page of stale) {
+        const base = slugify(page.title);
+        let next = base;
+        for (let n = 2; taken.has(next); n++) next = `${base}-${n}`;
+        taken.delete(page.slug);
+        taken.add(next);
+        await changePageSlug(space.id, page, next);
+      }
+      await onSaved();
+      setDone(stale.length);
+    } catch (err) {
+      window.alert((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="font-medium">{t("settings.addressCleanupTitle")}</h2>
+        <p className="mt-2 text-sm text-muted">{t("settings.addressCleanupBody")}</p>
+      </div>
+
+      {stale.length === 0 ? (
+        <p className="text-sm text-muted">
+          {done > 0 ? t("settings.addressCleanupDone", { n: done }) : t("settings.addressCleanupNone")}
+        </p>
+      ) : (
+        <>
+          <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+            {stale.map((page) => (
+              <li key={page.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+                <span className="font-medium">{page.title}</span>
+                <code className="rounded bg-surface px-1.5 py-0.5 text-xs">/{page.slug}</code>
+                <span className="text-muted" aria-hidden>
+                  →
+                </span>
+                <code className="rounded bg-surface px-1.5 py-0.5 text-xs text-accent">
+                  /{slugify(page.title)}
+                </code>
+              </li>
+            ))}
+          </ul>
+
+          <button
+            onClick={run}
+            disabled={busy}
+            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
+          >
+            {busy ? t("common.saving") : t("settings.addressCleanupRun", { n: stale.length })}
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 

@@ -44,7 +44,7 @@ export function MobileNav({
     <>
       <div
         data-screen-only
-        className="sticky top-14 z-30 flex h-12 items-center gap-2 border-b border-border bg-background/90 px-2 backdrop-blur md:hidden"
+        className="sticky top-14 z-30 flex h-12 items-center gap-2 border-b border-border bg-background px-2 md:hidden"
       >
         <button
           type="button"

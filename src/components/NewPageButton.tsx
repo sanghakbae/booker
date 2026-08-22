@@ -60,23 +60,37 @@ export function NewPageButton() {
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
-          // A form with no submit button does not reliably submit on Enter,
-          // and Enter is the only way to create from here.
-          if (e.key === "Enter") {
-            e.preventDefault();
-            void create(e);
-          }
+          if (e.key !== "Enter") return;
+          // Route Enter through the form's own submit path. Calling the handler
+          // directly from here looked equivalent but did not fire in practice,
+          // while requestSubmit() reliably does — so use the mechanism that is
+          // demonstrably wired up rather than a second, parallel one.
+          e.preventDefault();
+          e.currentTarget.form?.requestSubmit();
         }}
-        onBlur={() => !title.trim() && setOpen(false)}
         placeholder={t("sidebar.docTitlePlaceholder")}
         disabled={busy}
         className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
       />
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-      {/* Keeps native implicit submission available too. */}
-      <button type="submit" className="sr-only">
-        {t("common.create")}
-      </button>
+
+      {/* A visible action, so creating never depends on knowing to press Enter. */}
+      <div className="mt-2 flex gap-2">
+        <button
+          type="submit"
+          disabled={busy || !title.trim()}
+          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground disabled:opacity-40"
+        >
+          {busy ? t("common.creating") : t("common.create")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface"
+        >
+          {t("common.close")}
+        </button>
+      </div>
     </form>
   );
 }

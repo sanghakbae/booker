@@ -286,7 +286,11 @@ export function EditView({ slug }: { slug: string }) {
                     disabled={publishing}
                     className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
                   >
-                    {publishing ? t("editor.publishing") : t("editor.publishThis")}
+                    {publishing
+                      ? t("editor.publishing")
+                      : page.published
+                        ? t("editor.publishChanges")
+                        : t("editor.publishThis")}
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">

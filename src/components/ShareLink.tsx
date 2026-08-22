@@ -12,10 +12,20 @@ const subscribeNever = () => () => {};
 /** The manual's own public address, with one-click copy. */
 export function ShareLink({ spaceSlug }: { spaceSlug: string }) {
   const t = useT();
-  const { pages, canEdit } = useSpace();
+  const { pages, drafts, canEdit } = useSpace();
 
   // Editors see every document; readers only ever see published ones.
   const published = pages.filter((page) => page.published).length;
+
+  /**
+   * Documents whose draft has moved on from what readers see. Easy to lose
+   * track of — an image added after publishing simply never appears.
+   */
+  const pending = pages.filter((page) => {
+    const draft = drafts.get(page.id);
+    if (!draft) return false;
+    return draft.title !== page.title || draft.content !== page.content;
+  }).length;
   const [copied, setCopied] = useState(false);
 
   // On localhost the useful link is the local one, not the production domain.
@@ -55,6 +65,12 @@ export function ShareLink({ spaceSlug }: { spaceSlug: string }) {
           warning about — the sender cannot tell from their own view. */}
       {canEdit && published === 0 && (
         <p className="mt-1.5 text-xs text-warning">{t("sidebar.nothingPublished")}</p>
+      )}
+
+      {canEdit && pending > 0 && (
+        <p className="mt-1.5 rounded bg-warning/12 px-2 py-1 text-xs font-medium text-warning">
+          {t("sidebar.pendingSummary", { n: pending })}
+        </p>
       )}
 
       <button

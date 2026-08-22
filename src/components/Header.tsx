@@ -11,7 +11,7 @@ export function Header() {
   const t = useT();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border bg-background">
       <div className="brand-rule absolute inset-x-0 top-0 h-0.5" aria-hidden />
       <div
         style={{ maxWidth: "var(--container-width)" }}
