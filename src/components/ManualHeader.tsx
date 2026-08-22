@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEmbedded } from "@/lib/embedded";
 import { useAuth } from "./AuthProvider";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useT } from "./LocaleProvider";
@@ -11,9 +12,14 @@ export function ManualHeader() {
   const { space } = useSpace();
   const { user, loading, error, signIn } = useAuth();
   const t = useT();
+  const embedded = useEmbedded();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background">
+    <header
+      className={`z-40 border-b border-border bg-background ${
+        embedded ? "" : "sticky top-0"
+      }`}
+    >
       <div className="brand-rule absolute inset-x-0 top-0 h-0.5" aria-hidden />
       <div
         style={{ maxWidth: "var(--container-width)" }}

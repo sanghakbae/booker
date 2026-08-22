@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useEmbedded } from "@/lib/embedded";
 import { CloseIcon, MenuIcon } from "./Icons";
 import { useT } from "./LocaleProvider";
 import { SidebarContent } from "./SidebarContent";
@@ -19,6 +20,7 @@ export function MobileNav({
 }) {
   const { space } = useSpace();
   const t = useT();
+  const embedded = useEmbedded();
   const [open, setOpen] = useState(false);
 
   // A drawer over a scrolled page should not scroll the page behind it.
@@ -44,7 +46,9 @@ export function MobileNav({
     <>
       <div
         data-screen-only
-        className="sticky top-14 z-30 flex h-12 items-center gap-2 border-b border-border bg-background px-2 md:hidden"
+        className={`z-30 flex h-12 items-center gap-2 border-b border-border bg-background px-2 md:hidden ${
+          embedded ? "" : "sticky top-14"
+        }`}
       >
         <button
           type="button"
