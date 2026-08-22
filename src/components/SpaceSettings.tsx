@@ -15,6 +15,7 @@ import { hasHangul } from "@/lib/romanize";
 import type { MessageKey } from "@/lib/i18n";
 import type { Feedback } from "@/lib/types";
 import { useAuth } from "./AuthProvider";
+import { useDialogs } from "./DialogProvider";
 import { EmptyState, Loading } from "./Loading";
 import { useLocale, useT } from "./LocaleProvider";
 import { MobileNav } from "./MobileNav";
@@ -116,6 +117,7 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
   const { space } = useSpace();
   const router = useRouter();
   const t = useT();
+  const dialogs = useDialogs();
   const [title, setTitle] = useState(space?.title ?? "");
   const [description, setDescription] = useState(space?.description ?? "");
   const [visibility, setVisibility] = useState(space?.visibility ?? "public");
@@ -138,7 +140,7 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
 
       if (slugChanged) {
         // The document ID is the slug, so this rewrites every document.
-        const ok = window.confirm(
+        const ok = await dialogs.confirm(
           t("settings.slugWillChange", { from: space.slug, to: nextSlug })
         );
         if (!ok) {
@@ -227,6 +229,7 @@ function GeneralTab({ onSaved }: { onSaved: () => Promise<void> }) {
 function AddressesTab({ onSaved }: { onSaved: () => Promise<void> }) {
   const { space, pages } = useSpace();
   const t = useT();
+  const dialogs = useDialogs();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(0);
 
@@ -249,7 +252,7 @@ function AddressesTab({ onSaved }: { onSaved: () => Promise<void> }) {
       await onSaved();
       setDone(stale.length);
     } catch (err) {
-      window.alert((err as Error).message);
+      void dialogs.alert((err as Error).message);
     } finally {
       setBusy(false);
     }
@@ -450,6 +453,7 @@ function FeedbackTab() {
 function DangerTab({ onDeleted }: { onDeleted: () => void }) {
   const { space } = useSpace();
   const t = useT();
+  const dialogs = useDialogs();
   const [confirmText, setConfirmText] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -462,7 +466,7 @@ function DangerTab({ onDeleted }: { onDeleted: () => void }) {
       await deleteSpace(space.id);
       onDeleted();
     } catch (err) {
-      window.alert(t("settings.deleteFailed", { message: (err as Error).message }));
+      void dialogs.alert(t("settings.deleteFailed", { message: (err as Error).message }));
       setBusy(false);
     }
   };

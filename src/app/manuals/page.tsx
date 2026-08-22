@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { Loading } from "@/components/Loading";
+import { useDialogs } from "@/components/DialogProvider";
 import { useT } from "@/components/LocaleProvider";
 import { isAdmin } from "@/lib/admin";
 import { listAllSpaces, listOwnedSpaces, listSharedSpaces, updateSpace } from "@/lib/db";
@@ -188,6 +189,7 @@ export default function ManualsPage() {
 /** One owned manual, with the publish switch the owner reaches for most. */
 function ManualCard({ space, onChanged }: { space: Space; onChanged: () => Promise<void> }) {
   const t = useT();
+  const dialogs = useDialogs();
   const [busy, setBusy] = useState(false);
   const isPublic = space.visibility === "public";
 
@@ -197,7 +199,7 @@ function ManualCard({ space, onChanged }: { space: Space; onChanged: () => Promi
       await updateSpace(space.id, { visibility: isPublic ? "private" : "public" });
       await onChanged();
     } catch (err) {
-      window.alert(t("manuals.changeFailed", { message: (err as Error).message }));
+      void dialogs.alert(t("manuals.changeFailed", { message: (err as Error).message }));
     } finally {
       setBusy(false);
     }

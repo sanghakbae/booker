@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { useDialogs } from "./DialogProvider";
 import { useT } from "./LocaleProvider";
 import { useSpace } from "./SpaceProvider";
 
@@ -12,6 +13,7 @@ const subscribeNever = () => () => {};
 /** The manual's own public address, with one-click copy. */
 export function ShareLink({ spaceSlug }: { spaceSlug: string }) {
   const t = useT();
+  const dialogs = useDialogs();
   const { pages, drafts, canEdit } = useSpace();
 
   // Editors see every document; readers only ever see published ones.
@@ -45,7 +47,7 @@ export function ShareLink({ spaceSlug }: { spaceSlug: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      window.prompt(t("sidebar.copyPrompt"), url);
+      void dialogs.prompt(t("sidebar.copyPrompt"), url);
     }
   };
 

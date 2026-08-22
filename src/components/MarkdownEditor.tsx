@@ -34,6 +34,7 @@ import {
   TableIcon,
   TaskListIcon,
 } from "./Icons";
+import { useDialogs } from "./DialogProvider";
 import { useT } from "./LocaleProvider";
 import { Tooltip } from "./Tooltip";
 
@@ -73,6 +74,7 @@ export function MarkdownEditor({
   spaceId: string;
 }) {
   const t = useT();
+  const dialogs = useDialogs();
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const [view, setView] = useState<View>("split");
   const wide = useIsWide();
@@ -105,10 +107,10 @@ export function MarkdownEditor({
     [value, onChange]
   );
 
-  const promptLink = useCallback(() => {
-    const url = window.prompt(t("editor.linkPrompt"), "https://");
+  const promptLink = useCallback(async () => {
+    const url = await dialogs.prompt(t("editor.linkPrompt"), "https://");
     if (url) apply((input) => insertLink(input, url));
-  }, [apply, t]);
+  }, [apply, dialogs, t]);
 
   const upload = useCallback(
     async (files: FileList | File[]) => {
@@ -141,7 +143,7 @@ export function MarkdownEditor({
       if (snippets.length) apply((input) => insertBlock(input, snippets.join("\n\n")));
 
       if (failed.length) {
-        window.alert(
+        void dialogs.alert(
           t("editor.uploadPartial", {
             ok: snippets.length,
             failed: failed.length,
@@ -150,7 +152,7 @@ export function MarkdownEditor({
         );
       }
     },
-    [apply, spaceId, t]
+    [apply, dialogs, spaceId, t]
   );
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -172,7 +174,7 @@ export function MarkdownEditor({
     }
     if (meta && e.key.toLowerCase() === "k") {
       e.preventDefault();
-      promptLink();
+      void promptLink();
       return;
     }
     if (meta && e.key === "Enter") {
@@ -239,7 +241,7 @@ export function MarkdownEditor({
       { icon: <QuoteIcon />, label: t("editor.quote"), run: () => apply((i) => togglePrefix(i, "> ")) },
     ],
     [
-      { icon: <LinkIcon />, label: t("editor.linkLabel"), shortcut: `${mod}K`, run: promptLink },
+      { icon: <LinkIcon />, label: t("editor.linkLabel"), shortcut: `${mod}K`, run: () => void promptLink() },
       { icon: <CodeBlockIcon />, label: t("editor.codeBlock"), run: () => apply((i) => insertBlock(i, "```\n\n```")) },
       { icon: <TableIcon />, label: t("editor.table"), run: () => apply((i) => insertBlock(i, makeTable(2, 3))) },
       { icon: <DividerIcon />, label: t("editor.divider"), run: () => apply((i) => insertBlock(i, "---")) },

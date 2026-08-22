@@ -15,6 +15,7 @@ import {
 } from "@/lib/db";
 import type { Version } from "@/lib/types";
 import { EmptyState, Loading } from "./Loading";
+import { useDialogs } from "./DialogProvider";
 import { useT } from "./LocaleProvider";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { MobileNav } from "./MobileNav";
@@ -28,6 +29,7 @@ export function EditView({ slug }: { slug: string }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const t = useT();
+  const dialogs = useDialogs();
 
   const page = useMemo(() => findPageBySlug(pages, slug).page, [pages, slug]);
   const draft = page ? drafts.get(page.id) : undefined;
@@ -96,7 +98,7 @@ export function EditView({ slug }: { slug: string }) {
       // The form is deliberately NOT re-seeded: autosave fires while the user
       // is still typing, and re-seeding would replace their newer text.
     } catch (err) {
-      window.alert(t("editor.saveFailed", { message: (err as Error).message }));
+      void dialogs.alert(t("editor.saveFailed", { message: (err as Error).message }));
     } finally {
       setSaving(false);
     }
@@ -119,7 +121,7 @@ export function EditView({ slug }: { slug: string }) {
       await publishPage(space.id, page.id, body, user?.email ?? t("editor.unknownAuthor"));
       await refresh();
     } catch (err) {
-      window.alert(t("editor.publishFailed", { message: (err as Error).message }));
+      void dialogs.alert(t("editor.publishFailed", { message: (err as Error).message }));
     } finally {
       setPublishing(false);
     }
@@ -128,7 +130,7 @@ export function EditView({ slug }: { slug: string }) {
   const unpublish = async () => {
     if (!space || !page) return;
     setMenuOpen(false);
-    if (!window.confirm(t("editor.confirmUnpublish", { title: page.title }))) return;
+    if (!(await dialogs.confirm(t("editor.confirmUnpublish", { title: page.title })))) return;
     await unpublishPage(space.id, page.id);
     await refresh();
   };
@@ -136,7 +138,7 @@ export function EditView({ slug }: { slug: string }) {
   const remove = async () => {
     if (!space || !page) return;
     setMenuOpen(false);
-    if (!window.confirm(t("editor.confirmDelete", { title: page.title }))) return;
+    if (!(await dialogs.confirm(t("editor.confirmDelete", { title: page.title })))) return;
     await deletePage(space.id, page.id);
     await refresh();
     router.push(`/s/${space.slug}`);
@@ -152,14 +154,14 @@ export function EditView({ slug }: { slug: string }) {
     setMenuOpen(false);
     const next = slugify(title || page.title);
     if (next === page.slug) {
-      window.alert(t("editor.addressUnchanged"));
+      await dialogs.alert(t("editor.addressUnchanged"));
       return;
     }
     if (pages.some((p) => p.id !== page.id && p.slug === next)) {
-      window.alert(t("editor.addressTaken", { slug: next }));
+      await dialogs.alert(t("editor.addressTaken", { slug: next }));
       return;
     }
-    if (!window.confirm(t("editor.confirmMatchAddress", { from: page.slug, to: next }))) return;
+    if (!(await dialogs.confirm(t("editor.confirmMatchAddress", { from: page.slug, to: next })))) return;
     await changePageSlug(space.id, page, next);
     await refresh();
     router.replace(`/s/${space.slug}/${next}/edit`);
@@ -168,12 +170,12 @@ export function EditView({ slug }: { slug: string }) {
   const rename = async () => {
     if (!space || !page) return;
     setMenuOpen(false);
-    const next = window.prompt(t("editor.addressPrompt"), page.slug);
+    const next = await dialogs.prompt(t("editor.addressPrompt"), page.slug);
     if (!next) return;
     const slugified = slugify(next);
     if (slugified === page.slug) return;
     if (pages.some((p) => p.id !== page.id && p.slug === slugified)) {
-      window.alert(t("editor.addressTaken", { slug: slugified }));
+      await dialogs.alert(t("editor.addressTaken", { slug: slugified }));
       return;
     }
     await changePageSlug(space.id, page, slugified);

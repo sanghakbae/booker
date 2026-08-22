@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider";
+import { DialogProvider } from "@/components/DialogProvider";
 import { LocaleProvider } from "@/components/LocaleProvider";
 import { SiteChrome } from "@/components/SiteChrome";
 import "./globals.css";
@@ -19,9 +20,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ko" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <LocaleProvider>
-          <AuthProvider>
-            <SiteChrome>{children}</SiteChrome>
-          </AuthProvider>
+          <DialogProvider>
+            <AuthProvider>
+              <SiteChrome>{children}</SiteChrome>
+            </AuthProvider>
+          </DialogProvider>
         </LocaleProvider>
       </body>
     </html>

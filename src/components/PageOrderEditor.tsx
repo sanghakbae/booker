@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { flattenTree, savePageOrder } from "@/lib/db";
 import { move, nudge, shift, toUpdates, type OutlineRow } from "@/lib/outline";
 import type { PageNode } from "@/lib/types";
+import { useDialogs } from "./DialogProvider";
 import { useT } from "./LocaleProvider";
 import { useSpace } from "./SpaceProvider";
 
@@ -18,6 +19,7 @@ function toRows(tree: PageNode[], depth = 0): OutlineRow[] {
 export function PageOrderEditor() {
   const { space, tree, refresh } = useSpace();
   const t = useT();
+  const dialogs = useDialogs();
   const initial = useMemo(() => toRows(tree), [tree]);
   const [rows, setRows] = useState<OutlineRow[] | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
@@ -26,15 +28,35 @@ export function PageOrderEditor() {
   const current = rows ?? initial;
   const changed = rows !== null;
 
+  /**
+   * Edits and saving both read through here instead of the state variable.
+   * A click handler closes over the render it was created in, so pressing
+   * 순서 저장 straight after a move wrote the arrangement from before it.
+   * Only ever touched inside handlers, never during render.
+   */
+  const pending = useRef<OutlineRow[] | null>(null);
+  const readRows = () => pending.current ?? initial;
+
+  const apply = (next: OutlineRow[]) => {
+    pending.current = next;
+    setRows(next);
+  };
+
+  const discard = () => {
+    pending.current = null;
+    setRows(null);
+  };
+
   const save = async () => {
-    if (!space || !rows) return;
+    const snapshot = readRows();
+    if (!space || !changed) return;
     setSaving(true);
     try {
-      await savePageOrder(space.id, toUpdates(rows));
+      await savePageOrder(space.id, toUpdates(snapshot));
       await refresh();
-      setRows(null);
+      discard();
     } catch (err) {
-      window.alert(t("order.saveFailed", { message: (err as Error).message }));
+      void dialogs.alert(t("order.saveFailed", { message: (err as Error).message }));
     } finally {
       setSaving(false);
     }
@@ -51,6 +73,9 @@ export function PageOrderEditor() {
       </p>
 
       <ul className="overflow-hidden rounded-lg border border-border">
+        {/* The row handlers read the pending-rows ref, but only when clicked —
+            the lint rule cannot see that the read is deferred. */}
+        {/* eslint-disable-next-line react-hooks/refs */}
         {current.map((row, index) => (
           <li
             key={row.id}
@@ -61,7 +86,7 @@ export function PageOrderEditor() {
             onDrop={(e) => {
               e.preventDefault();
               const from = current.findIndex((r) => r.id === dragging);
-              if (from !== -1) setRows(move(current, from, index));
+              if (from !== -1) apply(move(readRows(), from, index));
               setDragging(null);
             }}
             style={{ paddingLeft: `${0.75 + row.depth * 1.5}rem` }}
@@ -81,10 +106,10 @@ export function PageOrderEditor() {
 
             <div className="flex shrink-0 items-center">
               {[
-                { label: t("order.up"), sign: "↑", run: () => setRows(nudge(current, index, -1)) },
-                { label: t("order.down"), sign: "↓", run: () => setRows(nudge(current, index, 1)) },
-                { label: t("order.outdent"), sign: "⇤", run: () => setRows(shift(current, index, -1)) },
-                { label: t("order.indent"), sign: "⇥", run: () => setRows(shift(current, index, 1)) },
+                { label: t("order.up"), sign: "↑", run: () => apply(nudge(readRows(), index, -1)) },
+                { label: t("order.down"), sign: "↓", run: () => apply(nudge(readRows(), index, 1)) },
+                { label: t("order.outdent"), sign: "⇤", run: () => apply(shift(readRows(), index, -1)) },
+                { label: t("order.indent"), sign: "⇥", run: () => apply(shift(readRows(), index, 1)) },
               ].map((action) => (
                 <button
                   key={action.label}
@@ -109,7 +134,7 @@ export function PageOrderEditor() {
           {saving ? t("common.saving") : t("order.save")}
         </button>
         {changed && (
-          <button onClick={() => setRows(null)} className="text-sm text-muted hover:text-foreground">
+          <button onClick={discard} className="text-sm text-muted hover:text-foreground">
             {t("common.revert")}
           </button>
         )}
