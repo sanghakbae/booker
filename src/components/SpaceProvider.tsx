@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   buildTree,
   canEditSpace,
@@ -51,6 +51,24 @@ export function SpaceProvider({
 
   const email = user?.email ?? null;
   const uid = user?.uid ?? null;
+  const editable = canEditSpace(space, email, uid);
+
+  /**
+   * The navigation tree. For an editor it shows the title being worked on,
+   * not the published one: the sidebar is their workspace, and a rename that
+   * did not appear there read as a rename that had not saved. Readers still
+   * see published titles, and the "unpublished changes" badge is what says the
+   * public copy differs.
+   */
+  const tree = useMemo(
+    () =>
+      buildTree(
+        editable
+          ? pages.map((page) => ({ ...page, title: drafts.get(page.id)?.title ?? page.title }))
+          : pages
+      ),
+    [pages, drafts, editable]
+  );
 
   const refresh = useCallback(async () => {
     const found = await getSpaceBySlug(slug);
@@ -97,9 +115,9 @@ export function SpaceProvider({
         space,
         pages,
         drafts,
-        tree: buildTree(pages),
+        tree,
         loading,
-        canEdit: canEditSpace(space, email, uid),
+        canEdit: editable,
         isOwner: !!space && !!uid && space.ownerId === uid,
         refresh,
       }}

@@ -141,6 +141,29 @@ export function EditView({ slug }: { slug: string }) {
     router.push(`/s/${space.slug}`);
   };
 
+  /**
+   * Derives the address from the current title. Kept as a separate action
+   * rather than tying the address to the title: a document's address is what
+   * other people have linked to, so it only moves when asked.
+   */
+  const matchAddress = async () => {
+    if (!space || !page) return;
+    setMenuOpen(false);
+    const next = slugify(title || page.title);
+    if (next === page.slug) {
+      window.alert(t("editor.addressUnchanged"));
+      return;
+    }
+    if (pages.some((p) => p.id !== page.id && p.slug === next)) {
+      window.alert(t("editor.addressTaken", { slug: next }));
+      return;
+    }
+    if (!window.confirm(t("editor.confirmMatchAddress", { from: page.slug, to: next }))) return;
+    await updatePage(space.id, page.id, { slug: next });
+    await refresh();
+    router.replace(`/s/${space.slug}/${next}/edit`);
+  };
+
   const rename = async () => {
     if (!space || !page) return;
     setMenuOpen(false);
@@ -280,6 +303,12 @@ export function EditView({ slug }: { slug: string }) {
                           className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface"
                         >
                           {t("editor.history")}
+                        </button>
+                        <button
+                          onClick={matchAddress}
+                          className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface"
+                        >
+                          {t("editor.matchAddress")}
                         </button>
                         <button
                           onClick={rename}
