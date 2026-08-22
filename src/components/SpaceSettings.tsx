@@ -12,6 +12,7 @@ import {
 } from "@/lib/db";
 import type { MessageKey } from "@/lib/i18n";
 import type { Feedback } from "@/lib/types";
+import { useAuth } from "./AuthProvider";
 import { EmptyState, Loading } from "./Loading";
 import { useLocale, useT } from "./LocaleProvider";
 import { MobileNav } from "./MobileNav";
@@ -31,16 +32,25 @@ const TABS: Array<{ id: Tab; key: MessageKey; ownerOnly?: boolean }> = [
 
 export function SpaceSettings() {
   const { space, loading, canEdit, isOwner, refresh } = useSpace();
+  const { loading: authLoading } = useAuth();
   const router = useRouter();
   const t = useT();
-  // Deep links such as /settings#order come from the editor.
-  const [tab, setTab] = useState<Tab>(() => {
-    if (typeof window === "undefined") return "general";
-    const hash = window.location.hash.replace("#", "");
-    return TABS.some((entry) => entry.id === hash) ? (hash as Tab) : "general";
-  });
+  const [tab, setTab] = useState<Tab>("general");
 
-  if (loading) return <Loading label={t("common.loading")} />;
+  /**
+   * Deep links such as /settings#order come from the editor. Read after mount:
+   * deriving it during the first render disagreed with the prerendered HTML,
+   * and the resulting hydration mismatch swallowed the first tab click.
+   */
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (TABS.some((entry) => entry.id === hash)) setTab(hash as Tab);
+  }, []);
+
+  // Signing in is what grants access, so a verdict before auth settles is a
+  // coin flip — it showed "you cannot view these settings" to the owner.
+  if (loading || authLoading) return <Loading label={t("common.loading")} />;
   if (!space) return <EmptyState title={t("reader.spaceNotFound")} />;
   if (!canEdit) return <EmptyState title={t("settings.noPermission")} />;
 

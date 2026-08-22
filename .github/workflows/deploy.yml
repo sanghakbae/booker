@@ -7,7 +7,9 @@ on:
   # static HTML that crawlers see. Trigger it by hand or on a schedule.
   workflow_dispatch:
   schedule:
-    - cron: "0 18 * * *" # 03:00 KST daily
+    # Publishing writes to Firestore, but the prerendered HTML — the fast,
+    # crawlable copy — only changes on a build. Hourly keeps the gap small.
+    - cron: "17 * * * *"
 
 permissions:
   contents: read

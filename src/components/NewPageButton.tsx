@@ -16,7 +16,7 @@ export function NewPageButton() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const create = async (e: React.FormEvent) => {
+  const create = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!space || !title.trim() || busy) return;
     setBusy(true);
@@ -58,13 +58,25 @@ export function NewPageButton() {
         autoFocus
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setOpen(false);
+          // A form with no submit button does not reliably submit on Enter,
+          // and Enter is the only way to create from here.
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void create(e);
+          }
+        }}
         onBlur={() => !title.trim() && setOpen(false)}
         placeholder={t("sidebar.docTitlePlaceholder")}
         disabled={busy}
         className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
       />
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {/* Keeps native implicit submission available too. */}
+      <button type="submit" className="sr-only">
+        {t("common.create")}
+      </button>
     </form>
   );
 }

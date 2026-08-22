@@ -25,7 +25,7 @@ import { VersionHistory } from "./VersionHistory";
 
 export function EditView({ slug }: { slug: string }) {
   const { space, pages, drafts, loading, canEdit, refresh } = useSpace();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const t = useT();
 
@@ -187,7 +187,9 @@ export function EditView({ slug }: { slug: string }) {
     setHistoryOpen(false);
   };
 
-  if (loading) return <Loading label={t("common.loading")} />;
+  // Same reason as the settings screen: permission depends on the signed-in
+  // account, so deciding before auth resolves rejects the owner.
+  if (loading || authLoading) return <Loading label={t("common.loading")} />;
   if (!space || !page) return <EmptyState title={t("reader.pageNotFound")} />;
   if (!canEdit) {
     return <EmptyState title={t("editor.noPermission")} hint={t("editor.noPermissionHint")} />;

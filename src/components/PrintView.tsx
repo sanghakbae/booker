@@ -18,8 +18,11 @@ export function PrintView() {
   const documents = useMemo(() => flattenTree(tree), [tree]);
 
   // Give the content a moment to render before the print dialog measures it.
+  // Not inside an embedded frame: a print dialog opening on its own there is
+  // both unexpected and blocks the frame from painting.
   useEffect(() => {
     if (loading || !space || documents.length === 0) return;
+    if (window.self !== window.top) return;
     const timer = setTimeout(() => window.print(), 400);
     return () => clearTimeout(timer);
   }, [loading, space, documents.length]);
