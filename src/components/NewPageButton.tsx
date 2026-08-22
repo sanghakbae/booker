@@ -35,6 +35,8 @@ export function NewPageButton() {
       setOpen(false);
       router.push(`/s/${space.slug}/${slug}/edit`);
     } catch (err) {
+      // Reported in the panel, not through a dialog: a suppressed alert turned
+      // a failure into a button that appeared to do nothing.
       setError((err as Error).message);
     } finally {
       setBusy(false);
@@ -78,7 +80,10 @@ export function NewPageButton() {
         disabled={busy}
         className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
       />
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && (
+        <p className="mt-1 rounded bg-red-500/10 px-2 py-1 text-xs text-red-600">{error}</p>
+      )}
+      {busy && <p className="mt-1 text-xs text-muted">{t("common.creating")}</p>}
 
       {/* A visible action, so creating never depends on knowing to press Enter. */}
       <div className="mt-2 flex gap-2">

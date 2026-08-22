@@ -54,3 +54,7 @@ next-env.d.ts
 # wrangler
 /worker/.wrangler
 /worker/.dev.vars
+
+# generated at build time
+/src/lib/build-id.ts
+/public/build-id.json

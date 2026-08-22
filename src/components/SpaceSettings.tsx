@@ -39,18 +39,31 @@ export function SpaceSettings() {
   const { loading: authLoading } = useAuth();
   const router = useRouter();
   const t = useT();
-  const [tab, setTab] = useState<Tab>("general");
-
   /**
-   * Deep links such as /settings#order come from the editor. Read after mount:
-   * deriving it during the first render disagreed with the prerendered HTML,
-   * and the resulting hydration mismatch swallowed the first tab click.
+   * The address bar is the source of truth for which tab is open.
+   *
+   * Holding it in component state meant a click could be lost to a re-render
+   * — auth resolving, or a hydration mismatch against the prerendered HTML —
+   * and the panel would not move until the second click. A hash cannot be lost,
+   * and deep links such as /settings#order keep working.
    */
+  const [hash, setHash] = useState("");
+
   useEffect(() => {
-    const hash = window.location.hash.replace("#", "");
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (TABS.some((entry) => entry.id === hash)) setTab(hash as Tab);
+    const read = () => setHash(window.location.hash.replace("#", ""));
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
   }, []);
+
+  const tab: Tab = TABS.some((entry) => entry.id === hash) ? (hash as Tab) : "general";
+
+  const openTab = (next: Tab) => {
+    // replaceState rather than assigning location.hash: it records where we are
+    // without adding a history entry for every tab, so Back leaves settings.
+    window.history.replaceState(null, "", `#${next}`);
+    setHash(next);
+  };
 
   // Signing in is what grants access, so a verdict before auth settles is a
   // coin flip — it showed "you cannot view these settings" to the owner.
@@ -81,7 +94,7 @@ export function SpaceSettings() {
                 key={tabItem.id}
                 role="tab"
                 aria-selected={tab === tabItem.id}
-                onClick={() => setTab(tabItem.id)}
+                onClick={() => openTab(tabItem.id)}
                 className={`border-b-2 px-3 py-2.5 text-sm ${
                   tab === tabItem.id
                     ? "border-accent font-medium text-accent"

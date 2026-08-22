@@ -4,6 +4,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { DialogProvider } from "@/components/DialogProvider";
 import { LocaleProvider } from "@/components/LocaleProvider";
 import { SiteChrome } from "@/components/SiteChrome";
+import { StaleBuildGuard } from "@/components/StaleBuildGuard";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
+        <StaleBuildGuard />
         <LocaleProvider>
           <DialogProvider>
             <AuthProvider>
