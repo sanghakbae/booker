@@ -33,7 +33,12 @@ export function SpaceSettings() {
   const { space, loading, canEdit, isOwner, refresh } = useSpace();
   const router = useRouter();
   const t = useT();
-  const [tab, setTab] = useState<Tab>("general");
+  // Deep links such as /settings#order come from the editor.
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "general";
+    const hash = window.location.hash.replace("#", "");
+    return TABS.some((entry) => entry.id === hash) ? (hash as Tab) : "general";
+  });
 
   if (loading) return <Loading label={t("common.loading")} />;
   if (!space) return <EmptyState title={t("reader.spaceNotFound")} />;

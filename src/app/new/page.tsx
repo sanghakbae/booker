@@ -6,6 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { Loading } from "@/components/Loading";
 import { useT } from "@/components/LocaleProvider";
 import { createPage, createSpace, slugify } from "@/lib/db";
+import { hasHangul } from "@/lib/romanize";
 import { TEMPLATES } from "@/lib/templates";
 
 export default function NewSpacePage() {
@@ -17,7 +18,10 @@ export default function NewSpacePage() {
   const [templateId, setTemplateId] = useState("product");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
-  const [visibility, setVisibility] = useState<"public" | "private">("public");
+  // Private by default. A manual usually starts as a draft and often carries
+  // internal material, and the visibility control sits behind a collapsed
+  // section — so publishing has to be a deliberate act, not an oversight.
+  const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [showOptions, setShowOptions] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -89,9 +93,14 @@ export default function NewSpacePage() {
             className="w-full rounded-md border border-input bg-background px-3 py-2.5 text-lg"
           />
           {title && (
-            <p className="mt-1.5 text-xs text-muted">
-              booker.sanghak.kr/s/{effectiveSlug}
-            </p>
+            <>
+              <p className="mt-1.5 text-xs text-muted">
+                booker.sanghak.kr/s/{effectiveSlug}
+              </p>
+              {hasHangul(slug || title) && (
+                <p className="mt-1 text-xs text-muted">{t("new.romanizedHint")}</p>
+              )}
+            </>
           )}
         </div>
 

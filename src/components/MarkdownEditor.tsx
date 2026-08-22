@@ -116,12 +116,16 @@ export function MarkdownEditor({
       if (!images.length) return;
       setUploading(true);
       try {
+        const snippets: string[] = [];
         for (const file of images) {
           const url = await uploadImage(file, spaceId);
           // The extension is noise in alt text; the name is the useful part.
-          const alt = file.name.replace(/\.[^.]+$/, "");
-          apply((input) => insertBlock(input, `![${alt}](${url})`));
+          snippets.push(`![${file.name.replace(/\.[^.]+$/, "")}](${url})`);
         }
+        // One insert for the whole batch. Inserting inside the loop reused the
+        // editor value captured before the first insert, so each image
+        // overwrote the previous one and only the last survived.
+        apply((input) => insertBlock(input, snippets.join("\n\n")));
       } catch (err) {
         window.alert(t("editor.uploadFailed", { message: (err as Error).message }));
       } finally {

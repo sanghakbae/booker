@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./AuthProvider";
@@ -37,17 +38,32 @@ export function EditView({ slug }: { slug: string }) {
   const [publishing, setPublishing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  /** Set as soon as the user types, so a later load never overwrites them. */
+  const [touched, setTouched] = useState(false);
   const loadedFor = useRef<string | null>(null);
 
-  // Seed once per document from the draft, falling back to the published copy
-  // for documents that predate drafts.
+  /**
+   * Seeds the form from the draft, falling back to the published copy for
+   * documents that predate drafts.
+   *
+   * It re-seeds while the form is untouched: the draft can arrive after the
+   * page listing does, and seeding only once meant the editor kept showing the
+   * published title — which looked exactly like a rename that had not saved.
+   */
   useEffect(() => {
-    if (!page || loadedFor.current === page.id) return;
+    if (!page) return;
+    if (loadedFor.current === page.id && touched) return;
     loadedFor.current = page.id;
     setTitle(draft?.title ?? page.title);
     setContent(draft?.content ?? page.content);
     setParentId(draft?.parentId ?? page.parentId);
-  }, [page, draft]);
+  }, [page, draft, touched]);
+
+  // A different document starts over with an untouched form.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTouched(false);
+  }, [slug]);
 
   const dirty =
     !!page &&
@@ -69,11 +85,12 @@ export function EditView({ slug }: { slug: string }) {
     if (!space || !page || saving) return;
     setSaving(true);
     try {
-      await saveDraft(space.id, page.id, {
-        title: title.trim() || t("editor.untitled"),
-        content,
-        parentId,
-      });
+      await saveDraft(
+        space.id,
+        page.id,
+        { title: title.trim() || t("editor.untitled"), content, parentId },
+        { published: page.published }
+      );
       await refresh();
       // The form is deliberately NOT re-seeded: autosave fires while the user
       // is still typing, and re-seeding would replace their newer text.
@@ -97,7 +114,7 @@ export function EditView({ slug }: { slug: string }) {
     setPublishing(true);
     try {
       const body = { title: title.trim() || t("editor.untitled"), content, parentId };
-      await saveDraft(space.id, page.id, body);
+      await saveDraft(space.id, page.id, body, { published: page.published });
       await publishPage(space.id, page.id, body, user?.email ?? t("editor.unknownAuthor"));
       await refresh();
     } catch (err) {
@@ -164,7 +181,10 @@ export function EditView({ slug }: { slug: string }) {
             <div className="flex items-center gap-2">
               <input
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTouched(true);
+                  setTitle(e.target.value);
+                }}
                 placeholder={t("editor.docTitle")}
                 aria-label={t("editor.docTitle")}
                 className="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none"
@@ -193,7 +213,10 @@ export function EditView({ slug }: { slug: string }) {
               <select
                 id="parent-select"
                 value={parentId ?? ""}
-                onChange={(e) => setParentId(e.target.value || null)}
+                onChange={(e) => {
+                  setTouched(true);
+                  setParentId(e.target.value || null);
+                }}
                 className="rounded-md border border-input bg-background px-2 py-1 text-sm"
               >
                 <option value="">{t("editor.topLevel")}</option>
@@ -206,13 +229,22 @@ export function EditView({ slug }: { slug: string }) {
                   ))}
               </select>
 
+              {/* The 위치 select only sets nesting; sibling order lives in the
+                  manual settings, which was not discoverable from here. */}
+              <Link
+                href={`/s/${space.slug}/settings#order`}
+                className="text-xs text-accent hover:underline"
+              >
+                {t("editor.reorder")}
+              </Link>
+
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={publish}
                   disabled={publishing || (!unpublishedChanges && !dirty)}
                   className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
                 >
-                  {publishing ? t("editor.publishing") : t("editor.publish")}
+                  {publishing ? t("editor.publishing") : t("editor.publishThis")}
                 </button>
 
                 <button
@@ -279,7 +311,10 @@ export function EditView({ slug }: { slug: string }) {
 
           <MarkdownEditor
             value={content}
-            onChange={setContent}
+            onChange={(next) => {
+              setTouched(true);
+              setContent(next);
+            }}
             onSave={save}
             saving={saving}
             dirty={dirty}

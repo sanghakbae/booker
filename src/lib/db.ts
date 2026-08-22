@@ -16,6 +16,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { romanize } from "./romanize";
 import type { Draft, Feedback, Page, PageNode, Space, Version } from "./types";
 
 const spacesRef = collection(db, "spaces");
@@ -48,11 +49,15 @@ async function commitWrites(writes: Write[]) {
   }
 }
 
+/**
+ * Builds an address from a title. Hangul is transliterated rather than kept:
+ * a Korean address works, but it percent-encodes into an unreadable string the
+ * moment someone pastes the link into Slack or an email.
+ */
 export function slugify(input: string) {
-  const s = input
+  const s = romanize(input)
     .trim()
     .toLowerCase()
-    // Keep unicode letters/numbers so Korean titles survive.
     .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-+|-+$/g, "");
   return s || "untitled";
@@ -282,12 +287,26 @@ export async function createPage(
 export async function saveDraft(
   spaceId: string,
   pageId: string,
-  input: { title: string; content: string; parentId: string | null }
+  input: { title: string; content: string; parentId: string | null },
+  options: { published: boolean }
 ) {
   await setDoc(doc(db, "spaces", spaceId, "drafts", pageId), {
     ...input,
     updatedAt: serverTimestamp(),
   });
+
+  // The sidebar lists the published documents, so a draft-only rename left the
+  // old title on screen. While a document is unpublished there is nothing
+  // public to protect, so its title and position follow the draft immediately.
+  // Once published, the listing keeps showing what readers see until the next
+  // publish — that is what the "unpublished changes" badge is for.
+  if (!options.published) {
+    await updateDoc(doc(db, "spaces", spaceId, "pages", pageId), {
+      title: input.title,
+      parentId: input.parentId,
+      updatedAt: serverTimestamp(),
+    });
+  }
 }
 
 /** Copies the draft into the published document and records a version. */

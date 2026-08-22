@@ -49,6 +49,17 @@ export function PrintView() {
         </div>
       </div>
 
+      {documents.some((doc) => !doc.published) && (
+        <p
+          data-screen-only
+          className="mb-8 rounded-md bg-surface px-4 py-3 text-sm text-muted"
+        >
+          {t("print.includesDrafts", {
+            n: documents.filter((doc) => !doc.published).length,
+          })}
+        </p>
+      )}
+
       <header className="mb-12 border-b border-border pb-8">
         <h1 className="text-4xl font-bold">{space.title}</h1>
         {space.description && <p className="mt-3 text-muted">{space.description}</p>}
