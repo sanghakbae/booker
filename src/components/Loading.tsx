@@ -1,19 +1,32 @@
-/** One loading treatment for every screen, instead of ad-hoc "불러오는 중…" text. */
+/**
+ * One loading treatment for every screen. The skeleton alone was too faint to
+ * register — inside an embedded frame it read as a broken white page — so a
+ * spinner and the label sit above it.
+ */
 export function Loading({ label = "…" }: { label?: string }) {
   return (
     <div
       style={{ maxWidth: "var(--content-width)" }}
-      className="w-full animate-pulse px-4 py-10"
+      className="w-full px-4 py-10"
       role="status"
-      aria-label={label}
+      aria-live="polite"
     >
-      <div className="h-8 w-1/2 rounded bg-surface" />
-      <div className="mt-6 space-y-3">
-        <div className="h-4 w-full rounded bg-surface" />
-        <div className="h-4 w-11/12 rounded bg-surface" />
-        <div className="h-4 w-4/5 rounded bg-surface" />
+      <p className="flex items-center gap-2 text-sm text-muted">
+        <span
+          className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-accent border-t-transparent"
+          aria-hidden
+        />
+        {label}
+      </p>
+
+      <div className="mt-6 animate-pulse" aria-hidden>
+        <div className="h-8 w-1/2 rounded bg-surface" />
+        <div className="mt-6 space-y-3">
+          <div className="h-4 w-full rounded bg-surface" />
+          <div className="h-4 w-11/12 rounded bg-surface" />
+          <div className="h-4 w-4/5 rounded bg-surface" />
+        </div>
       </div>
-      <span className="sr-only">{label}</span>
     </div>
   );
 }

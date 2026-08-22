@@ -10,7 +10,13 @@ import { useSpace } from "./SpaceProvider";
  * Below md the sidebar is hidden, which previously left phone readers with no
  * way to reach any other document. This puts the same tree behind a drawer.
  */
-export function MobileNav({ currentTitle }: { currentTitle?: string }) {
+export function MobileNav({
+  currentTitle,
+  currentSlug,
+}: {
+  currentTitle?: string;
+  currentSlug?: string;
+}) {
   const { space } = useSpace();
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -79,7 +85,7 @@ export function MobileNav({ currentTitle }: { currentTitle?: string }) {
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-              <SidebarContent onNavigate={() => setOpen(false)} />
+              <SidebarContent currentSlug={currentSlug} onNavigate={() => setOpen(false)} />
             </div>
           </nav>
         </div>

@@ -78,7 +78,7 @@ export function MarkdownEditor({
   const wide = useIsWide();
   const effectiveView: View = view === "split" && !wide ? "write" : view;
   const [fullscreen, setFullscreen] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const pending = useRef<{ start: number; end: number } | null>(null);
 
   const counts = useMemo(() => stats(value), [value]);
@@ -114,22 +114,40 @@ export function MarkdownEditor({
     async (files: FileList | File[]) => {
       const images = Array.from(files).filter((f) => f.type.startsWith("image/"));
       if (!images.length) return;
-      setUploading(true);
-      try {
-        const snippets: string[] = [];
-        for (const file of images) {
+      setProgress({ done: 0, total: images.length });
+
+      // Each file is settled on its own. Aborting the batch on the first
+      // failure used to discard the images that had already uploaded, which
+      // made a partial failure look like "only one image was inserted".
+      const snippets: string[] = [];
+      const failed: string[] = [];
+
+      for (const [index, file] of images.entries()) {
+        try {
           const url = await uploadImage(file, spaceId);
           // The extension is noise in alt text; the name is the useful part.
           snippets.push(`![${file.name.replace(/\.[^.]+$/, "")}](${url})`);
+        } catch {
+          failed.push(file.name);
         }
-        // One insert for the whole batch. Inserting inside the loop reused the
-        // editor value captured before the first insert, so each image
-        // overwrote the previous one and only the last survived.
-        apply((input) => insertBlock(input, snippets.join("\n\n")));
-      } catch (err) {
-        window.alert(t("editor.uploadFailed", { message: (err as Error).message }));
-      } finally {
-        setUploading(false);
+        setProgress({ done: index + 1, total: images.length });
+      }
+
+      setProgress(null);
+
+      // One insert for the whole batch: inserting inside the loop reused the
+      // editor value captured before the first insert, so each image
+      // overwrote the previous one.
+      if (snippets.length) apply((input) => insertBlock(input, snippets.join("\n\n")));
+
+      if (failed.length) {
+        window.alert(
+          t("editor.uploadPartial", {
+            ok: snippets.length,
+            failed: failed.length,
+            names: failed.join(", "),
+          })
+        );
       }
     },
     [apply, spaceId, t]
@@ -267,7 +285,7 @@ export function MarkdownEditor({
 
         <Tooltip label={t("editor.uploadImage")} shortcut={t("editor.uploadHint")}>
           <label className="flex h-8 w-8 cursor-pointer items-center justify-center rounded text-foreground/80 hover:bg-background hover:text-foreground">
-            {uploading ? (
+            {progress ? (
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
             ) : (
               <ImageIcon />
@@ -368,6 +386,11 @@ export function MarkdownEditor({
         <span>{t("editor.words", { n: counts.words.toLocaleString() })}</span>
         <span>{t("editor.chars", { n: counts.chars.toLocaleString() })}</span>
         <span>{t("editor.readingTime", { n: counts.minutes })}</span>
+        {progress && (
+          <span className="text-accent">
+            {t("editor.uploadingCount", { done: progress.done, total: progress.total })}
+          </span>
+        )}
         <span className="ml-auto">{dirty ? t("editor.unsaved") : t("editor.allSaved")}</span>
       </div>
     </div>

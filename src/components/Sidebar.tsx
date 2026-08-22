@@ -4,7 +4,7 @@ import { useT } from "./LocaleProvider";
 import { SidebarContent } from "./SidebarContent";
 
 /** Desktop navigation rail. The mobile equivalent is MobileNav's drawer. */
-export function Sidebar() {
+export function Sidebar({ currentSlug }: { currentSlug?: string }) {
   const t = useT();
 
   return (
@@ -15,7 +15,7 @@ export function Sidebar() {
       aria-label={t("sidebar.docList")}
     >
       <div className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto px-3 py-6">
-        <SidebarContent />
+        <SidebarContent currentSlug={currentSlug} />
       </div>
     </nav>
   );

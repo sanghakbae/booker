@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import { searchPages } from "@/lib/search";
 import type { PageNode } from "@/lib/types";
@@ -72,13 +71,20 @@ function NavItem({
 }
 
 /** The navigation body, shared by the desktop rail and the mobile drawer. */
-export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarContent({
+  currentSlug = "",
+  onNavigate,
+}: {
+  /** Which document is on screen. Passed in because the manual root shows the
+      first document without putting its address in the URL. */
+  currentSlug?: string;
+  onNavigate?: () => void;
+}) {
   const { space, pages, tree, canEdit } = useSpace();
   const t = useT();
-  const pathname = usePathname();
   const [query, setQuery] = useState("");
 
-  const current = decodeURIComponent(pathname.split("/")[3] ?? "");
+  const current = currentSlug;
   const hits = useMemo(() => searchPages(pages, query), [pages, query]);
 
   if (!space) return null;

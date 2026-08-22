@@ -262,14 +262,43 @@ export function EditView({ slug }: { slug: string }) {
                 {t("editor.reorder")}
               </Link>
 
+              {/* The address is fixed on purpose, but when it no longer matches
+                  the title the reader sees a URL that contradicts the page. */}
+              <span className="flex items-center gap-1.5 text-xs text-muted">
+                <code className="rounded bg-surface px-1.5 py-0.5">/{page.slug}</code>
+                {slugify(title || page.title) !== page.slug && (
+                  <button onClick={matchAddress} className="text-accent hover:underline">
+                    {t("editor.matchAddress")}
+                  </button>
+                )}
+              </span>
+
               <div className="ml-auto flex items-center gap-2">
-                <button
-                  onClick={publish}
-                  disabled={publishing || (!unpublishedChanges && !dirty)}
-                  className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
-                >
-                  {publishing ? t("editor.publishing") : t("editor.publishThis")}
-                </button>
+                {/* The primary action follows the state. It used to read
+                    "publish this document" even once published, so the only
+                    signal that anything had happened was the draft badge
+                    disappearing from the sidebar. */}
+                {unpublishedChanges || dirty ? (
+                  <button
+                    onClick={publish}
+                    disabled={publishing}
+                    className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
+                  >
+                    {publishing ? t("editor.publishing") : t("editor.publishThis")}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-success/12 px-2.5 py-2 text-sm font-medium text-success">
+                      {t("editor.published")}
+                    </span>
+                    <button
+                      onClick={unpublish}
+                      className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface"
+                    >
+                      {t("editor.unpublish")}
+                    </button>
+                  </div>
+                )}
 
                 <button
                   onClick={() => router.push(`/s/${space.slug}/${page.slug}`)}
@@ -317,14 +346,6 @@ export function EditView({ slug }: { slug: string }) {
                         >
                           {t("editor.changeAddress")}
                         </button>
-                        {page.published && (
-                          <button
-                            onClick={unpublish}
-                            className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface"
-                          >
-                            {t("editor.unpublish")}
-                          </button>
-                        )}
                         <button
                           onClick={remove}
                           className="block w-full px-3 py-2.5 text-left text-sm text-red-500 hover:bg-surface"

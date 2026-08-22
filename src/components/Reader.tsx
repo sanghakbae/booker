@@ -15,7 +15,7 @@ import { Toc } from "./Toc";
 import { useSpace } from "./SpaceProvider";
 
 export function Reader({ slug }: { slug: string }) {
-  const { space, tree, drafts, loading, canEdit } = useSpace();
+  const { space, pages, tree, drafts, loading, canEdit } = useSpace();
   const t = useT();
   const router = useRouter();
 
@@ -39,15 +39,28 @@ export function Reader({ slug }: { slug: string }) {
 
   return (
     <>
-      <MobileNav currentTitle={current?.title} />
+      <MobileNav currentTitle={current?.title} currentSlug={current?.slug} />
 
       <div
         style={{ maxWidth: "var(--container-width)" }}
         className="mx-auto flex w-full flex-1 px-4"
       >
-        <Sidebar />
+        <Sidebar currentSlug={current?.slug} />
 
         <main className="min-w-0 flex-1 px-0 py-10 md:px-10">
+          {/* A public manual with nothing published looks empty to everyone who
+              has the link, and the owner cannot tell from their own view. */}
+          {canEdit &&
+            space.visibility === "public" &&
+            !pages.some((page) => page.published) && (
+              <p
+                data-screen-only
+                className="doc-aligned mb-6 rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning"
+              >
+                {t("space.publicNoDocs")}
+              </p>
+            )}
+
           {!current ? (
             <EmptyState title={t("reader.pageNotFound")} />
           ) : (
