@@ -59,12 +59,18 @@ export function NewPageButton() {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
-          if (e.key !== "Enter") return;
-          // Route Enter through the form's own submit path. Calling the handler
-          // directly from here looked equivalent but did not fire in practice,
-          // while requestSubmit() reliably does — so use the mechanism that is
-          // demonstrably wired up rather than a second, parallel one.
+          if (e.key === "Escape") {
+            setOpen(false);
+            return;
+          }
+          // A Korean IME sends Enter to commit the composition first; treating
+          // that as submit would create a document from a half-typed title.
+          if (e.nativeEvent.isComposing) return;
+          // Identified three ways: some environments deliver only one of them.
+          if (e.key !== "Enter" && e.code !== "Enter" && e.keyCode !== 13) return;
+
+          // Route through the form's own submit path rather than calling the
+          // handler directly, so Enter and the button share one code path.
           e.preventDefault();
           e.currentTarget.form?.requestSubmit();
         }}
